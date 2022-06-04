@@ -76,20 +76,32 @@ impl DbSessionStore {
 
     pub async fn store_session(&self, session: Session) -> Result<Option<String>, ErrResponse> {
         let session_string = serde_json::to_string(&session)?;
-        sqlx::query(
-            "
-            INSERT INTO sessions
+
+        #[cfg(feature = "mysql")]
+        let q = "INSERT INTO sessions
                 (id, session, expires) VALUES(?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 expires = VALUES(expires),
-                session = VALUES(session)
-        ",
-        )
-        .bind(session.id().to_string())
-        .bind(&session_string)
-        .bind(Utc::now() + Duration::hours(6))
-        .execute(&self.pool)
-        .await?;
+                session = VALUES(session)";
+        #[cfg(feature = "sqlite")]
+        let q = "INSERT INTO sessions
+                (id, session, expires) VALUES(?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                expires = ?,
+                session = ?";
+
+        let mut q = sqlx::query(q)
+            .bind(session.id().to_string())
+            .bind(&session_string)
+            .bind(Utc::now() + Duration::hours(6));
+
+        if cfg!(feature = "sqlite") {
+            q = q
+                .bind(&session_string)
+                .bind(Utc::now() + Duration::hours(6));
+        }
+
+        q.execute(&self.pool).await?;
 
         Ok(session.into_cookie_value())
     }
