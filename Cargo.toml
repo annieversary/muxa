@@ -8,20 +8,15 @@ edition = "2021"
 [dependencies]
 async-session = "3.0.0"
 axum = { version = "0.5.1", features = ["headers", "multipart"] }
-axum-extra = { version = "0.2.1", features = ["typed-routing"] }
 backtrace = "0.3.64"
-bcrypt = "0.11" # using 0.11 cause 0.12 introduces zeroize, and it conflicts with sqlx
 bytes = "1.1.0"
 chrono = "0.4.19"
-dotenv = "0.15.0"
-fake = "2.4.3"
 futures = "0.3.21"
 http = "0.2.7"
 hyper = "0.14.18"
 image = "0.24.2"
 maud = { version = "0.23.0" }
 paste = "1.0.6"
-reqwest = { version = "0.11.10" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.79"
 sqlx = { version = "0.5.11", features = ["runtime-tokio-rustls", "mysql", "chrono", "uuid", "offline"] }
