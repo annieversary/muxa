@@ -78,5 +78,24 @@ macro_rules! routes {
               }
             )*
         }
+
+        impl NamedRoute {
+            pub fn redirect(&self) -> axum::response::Redirect {
+              axum::response::Redirect::to(&self.to_href())
+            }
+
+            /// returns true if the routes are the same, ignoring the params
+            /// if you want equality of params too, use PartialEq::eq instead
+            pub fn matches(&self, other: &NamedRoute) -> bool {
+              use std::mem::discriminant;
+              discriminant(self) == discriminant(other)
+            }
+        }
+
+        impl std::fmt::Display for NamedRoute {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+              write!(f, "{}", self.to_href())
+            }
+        }
     };
 }
