@@ -84,25 +84,22 @@ pub struct HtmlContext<T> {
 
 impl<T> HtmlContext<T> {
     /// sets the title for this page
-    /// will be `stemmy` by default
+    /// will be `Config::app_name` by default
     pub fn with_title(mut self, s: impl ToString) -> Self {
         self.title = Some(s.to_string());
         self
     }
     pub fn get_title(&self) -> &str {
-        self.title.as_deref().unwrap_or("stemmy")
+        self.title.as_deref().unwrap_or(&self.config.get_app_name())
     }
 
     /// sets the description for this page
-    /// will be `stemmy` by default
     pub fn with_description(mut self, s: impl ToString) -> Self {
         self.description = Some(s.to_string());
         self
     }
-    pub fn get_description(&self) -> &str {
-        self.description
-            .as_deref()
-            .unwrap_or("smol little website where you can upload song stems")
+    pub fn get_description(&self) -> Option<&str> {
+        self.description.as_deref()
     }
 
     #[allow(dead_code)]

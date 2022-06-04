@@ -22,7 +22,7 @@ use crate::errors::{internal_error, ErrResponse};
 // https://github.com/AscendingCreations/AxumSessions/blob/main/src/session_store.rs
 // https://github.com/AscendingCreations/AxumSessions/blob/main/src/databases/mysql.rs
 
-pub const SESSION_COOKIE_NAME: &str = "stemmy_session";
+pub const SESSION_COOKIE_NAME: &str = "muxa_session";
 
 const FLASH_KEY: &str = "internal-key-flash";
 const FLASH_KEY_TRACKER: &str = "internal-key-flash-tracker";

@@ -11,6 +11,8 @@ struct ConfigInner {
     upload_path: PathBuf,
     static_path: PathBuf,
     base_url: String,
+
+    app_name: String,
 }
 
 impl Config {
@@ -32,11 +34,23 @@ impl Config {
         &self.0.static_path
     }
 
-    pub fn new(upload_path: PathBuf, static_path: PathBuf, base_url: String) -> Self {
+    /// Get a reference to the config inner's app name.
+    #[must_use]
+    pub fn get_app_name(&self) -> &str {
+        self.0.app_name.as_ref()
+    }
+
+    pub fn new(
+        upload_path: PathBuf,
+        static_path: PathBuf,
+        base_url: String,
+        app_name: String,
+    ) -> Self {
         Self(Arc::new(ConfigInner {
             upload_path,
             static_path,
             base_url,
+            app_name,
         }))
     }
 
@@ -49,10 +63,12 @@ impl Config {
             .expect("failed to get STATIC_PATH")
             .into();
         let base_url = std::env::var("BASE_URL").expect("failed to get BASE_URL");
+        let app_name = std::env::var("APP_NAME").expect("failed to get APP_NAME");
         Config(Arc::new(ConfigInner {
             upload_path,
             static_path,
             base_url,
+            app_name,
         }))
     }
 
@@ -79,7 +95,7 @@ impl Config {
     }
 
     /// returns absolute url to a file
-    /// eg: `https://stemmy.versary.town/uploaded/aaaaaaaaaa/image.png`
+    /// eg: `https://example.com/uploaded/aaaaaaaaaa/image.png`
     pub fn absolute_uploaded_url(&self, s: &str) -> String {
         self.absolute_url(&Self::uploaded_url(s))
     }

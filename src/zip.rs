@@ -24,7 +24,6 @@ pub fn add_file_to_zip(
     let file = File::open(file_path)?;
     let mut file = BufReader::new(file);
 
-    // add stem file to zip
     zip.start_file(&file_name, Default::default())?;
     std::io::copy(&mut file, &mut zip)?;
     zip.finish()?;
