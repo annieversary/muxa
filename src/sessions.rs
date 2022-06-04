@@ -28,9 +28,14 @@ const ERRORS_KEY_TRACKER: &str = "internal-key-errors-tracker";
 const OLD_KEY: &str = "internal-key-old";
 const OLD_KEY_TRACKER: &str = "internal-key-old-tracker";
 
+#[cfg(feature = "mysql")]
+type DbPool = sqlx::MySqlPool;
+#[cfg(feature = "sqlite")]
+type DbPool = sqlx::SqlitePool;
+
 #[derive(Clone)]
 pub struct DbSessionStore {
-    pool: sqlx::AnyPool,
+    pool: DbPool,
 }
 
 #[derive(sqlx::FromRow)]
@@ -43,7 +48,7 @@ struct InternalSession {
 
 impl DbSessionStore {
     #[must_use]
-    pub fn new(pool: sqlx::AnyPool) -> Self {
+    pub fn new(pool: DbPool) -> Self {
         Self { pool }
     }
 
