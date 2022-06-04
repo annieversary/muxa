@@ -1,17 +1,14 @@
-use std::collections::HashMap;
-
 use async_session::Session;
-use chrono::{Duration, NaiveDateTime, Utc};
-use serde::Serialize;
-use serde_json::Value;
-use sqlx::MySqlPool;
-
 use axum::{
     headers::{Cookie, HeaderMapExt},
     http::{header::SET_COOKIE, HeaderValue, Request, StatusCode},
     middleware::Next,
     response::IntoResponse,
 };
+use chrono::{Duration, NaiveDateTime, Utc};
+use serde::Serialize;
+use serde_json::Value;
+use std::collections::HashMap;
 use validator::{ValidationError, ValidationErrors};
 
 use crate::errors::{internal_error, ErrResponse};
@@ -33,7 +30,7 @@ const OLD_KEY_TRACKER: &str = "internal-key-old-tracker";
 
 #[derive(Clone)]
 pub struct DbSessionStore {
-    pool: MySqlPool,
+    pool: sqlx::AnyPool,
 }
 
 #[derive(sqlx::FromRow)]
@@ -46,7 +43,7 @@ struct InternalSession {
 
 impl DbSessionStore {
     #[must_use]
-    pub fn new(pool: MySqlPool) -> Self {
+    pub fn new(pool: sqlx::AnyPool) -> Self {
         Self { pool }
     }
 
