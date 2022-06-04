@@ -90,7 +90,9 @@ impl<T> HtmlContext<T> {
         self
     }
     pub fn get_title(&self) -> &str {
-        self.title.as_deref().unwrap_or(&self.config.get_app_name())
+        self.title
+            .as_deref()
+            .unwrap_or_else(|| self.config.get_app_name())
     }
 
     /// sets the description for this page
