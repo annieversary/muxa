@@ -60,7 +60,7 @@ impl DbSessionStore {
             )
         })?;
         let result: Option<InternalSession> = sqlx::query_as(
-            "SELECT session FROM sessions
+            "SELECT * FROM sessions
         WHERE id = ? AND (expires IS NULL OR expires > ?)",
         )
         .bind(id)
