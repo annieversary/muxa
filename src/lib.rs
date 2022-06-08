@@ -5,6 +5,7 @@ extern crate serde;
 
 pub mod config;
 pub mod consts;
+pub mod cookies;
 pub mod errors;
 pub mod extractors;
 pub mod helpers;

@@ -11,7 +11,10 @@ use serde_json::Value;
 use std::collections::HashMap;
 use validator::{ValidationError, ValidationErrors};
 
-use crate::errors::{internal_error, ErrResponse};
+use crate::{
+    cookies::SameSite,
+    errors::{internal_error, ErrResponse},
+};
 
 // implemented following
 // https://github.com/tokio-rs/axum/blob/main/examples/sessions/src/main.rs
@@ -36,6 +39,8 @@ type DbPool = sqlx::SqlitePool;
 #[derive(Clone)]
 pub struct DbSessionStore {
     pool: DbPool,
+    /// SameSite value to use for session cookies
+    same_site: SameSite,
 }
 
 #[derive(sqlx::FromRow)]
@@ -49,7 +54,15 @@ struct InternalSession {
 impl DbSessionStore {
     #[must_use]
     pub fn new(pool: DbPool) -> Self {
-        Self { pool }
+        Self {
+            pool,
+            same_site: SameSite::Strict,
+        }
+    }
+
+    pub fn with_same_site(mut self, same_site: SameSite) -> Self {
+        self.same_site = same_site;
+        self
     }
 
     pub async fn load_session(&self, cookie_value: String) -> Result<Option<Session>, ErrResponse> {
@@ -87,21 +100,15 @@ impl DbSessionStore {
         let q = "INSERT INTO sessions
                 (id, session, expires) VALUES(?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
-                expires = ?,
-                session = ?";
+                session = excluded.session,
+                expires = excluded.expires";
 
-        let mut q = sqlx::query(q)
+        sqlx::query(q)
             .bind(session.id().to_string())
             .bind(&session_string)
-            .bind(Utc::now() + Duration::hours(6));
-
-        if cfg!(feature = "sqlite") {
-            q = q
-                .bind(&session_string)
-                .bind(Utc::now() + Duration::hours(6));
-        }
-
-        q.execute(&self.pool).await?;
+            .bind(Utc::now() + Duration::hours(6))
+            .execute(&self.pool)
+            .await?;
 
         Ok(session.into_cookie_value())
     }
@@ -135,8 +142,8 @@ impl UserSession {
             .expect("calling save_and_get_cookie on a cloned session, this is not allowed");
         HeaderValue::from_str(
             format!(
-                "{}={}; SameSite=Strict; Secure; Path=/",
-                SESSION_COOKIE_NAME, cookie
+                "{}={}; SameSite={}; Secure; Path=/",
+                SESSION_COOKIE_NAME, cookie, self.store.same_site
             )
             .as_str(),
         )
@@ -258,11 +265,17 @@ impl UserSession {
 
 async fn get_session_from_cookie(store: &DbSessionStore, cookie: Option<String>) -> Session {
     if let Some(c) = cookie {
-        if let Ok(Some(mut session)) = store.load_session(c.clone()).await {
-            session.set_cookie_value(c);
-            return session;
+        match store.load_session(c.clone()).await {
+            Ok(Some(mut session)) => {
+                session.set_cookie_value(c);
+                return session;
+            }
+            Ok(None) => {}
+            Err(err) => tracing::error!("error getting session {err:?}"),
         }
     }
+
+    tracing::trace!("no session found, creating new");
 
     Session::new()
 }
