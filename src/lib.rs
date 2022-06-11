@@ -10,12 +10,14 @@ pub mod errors;
 pub mod extractors;
 pub mod helpers;
 pub mod html;
-pub mod image_compression;
 pub mod sessions;
 pub mod tests;
 pub mod tracing;
 pub mod validation;
 pub mod zip;
+
+#[cfg(feature = "img_processing")]
+pub mod image_compression;
 
 #[macro_use]
 pub mod macro_helpers;

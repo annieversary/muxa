@@ -8,8 +8,11 @@ edition = "2021"
 [features]
 # Defines a feature named `webp` that does not enable any other features.
 default = ["sqlite"]
+
 mysql = ["sqlx/mysql"]
 sqlite = ["sqlx/sqlite"]
+
+img_processing = ["dep:turbojpeg"]
 
 [dependencies]
 async-session = "3.0.0"
@@ -33,7 +36,7 @@ tower-http = { version = "0.2.5", features = ["fs", "trace"] }
 tracing = "0.1"
 tracing-appender = "0.2.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
-turbojpeg = {version = "0.4", features = ["image"]}
+turbojpeg = {version = "0.4", features = ["image"], optional = true }
 uuid = { version = "0.8.2", features = ["serde", "v4"] }
 validator = { version = "0.14.0", features = ["derive"] }
 zip = "0.6.2"
