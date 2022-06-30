@@ -106,7 +106,7 @@ impl DbSessionStore {
         sqlx::query(q)
             .bind(session.id().to_string())
             .bind(&session_string)
-            .bind(Utc::now() + Duration::hours(6))
+            .bind(Utc::now() + Duration::days(180))
             .execute(&self.pool)
             .await?;
 
@@ -142,8 +142,11 @@ impl UserSession {
             .expect("calling save_and_get_cookie on a cloned session, this is not allowed");
         HeaderValue::from_str(
             format!(
-                "{}={}; SameSite={}; Secure; Path=/",
-                SESSION_COOKIE_NAME, cookie, self.store.same_site
+                "{}={}; SameSite={}; Secure; Path=/; Max-Age={};",
+                SESSION_COOKIE_NAME,
+                cookie,
+                self.store.same_site,
+                60 * 60 * 24 * 360
             )
             .as_str(),
         )
