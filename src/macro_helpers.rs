@@ -55,7 +55,7 @@ macro_rules! routes {
 
 
             $(
-              #[derive(TypedPath, Debug, Deserialize, Clone, PartialEq)]
+              #[derive(muxa::reexports::TypedPath, Debug, muxa::reexports::Deserialize, Clone, PartialEq)]
               #[typed_path($route)]
               pub struct [<$id Path>] {
                 $(

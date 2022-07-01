@@ -14,13 +14,19 @@ pub mod sessions;
 pub mod tests;
 pub mod tracing;
 pub mod validation;
-pub mod zip;
 
 #[cfg(feature = "img_processing")]
 pub mod image_compression;
+#[cfg(feature = "zip")]
+pub mod zip;
 
 #[macro_use]
 pub mod macro_helpers;
 pub use macro_helpers::*;
 
 pub use paste;
+
+pub mod reexports {
+    pub use axum_extra::routing::TypedPath;
+    pub use serde::Deserialize;
+}
