@@ -15,6 +15,8 @@ pub mod tests;
 pub mod tracing;
 pub mod validation;
 
+#[cfg(feature = "zephyr")]
+pub mod css;
 #[cfg(feature = "img_processing")]
 pub mod image_compression;
 #[cfg(feature = "zip")]

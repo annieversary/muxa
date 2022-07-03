@@ -3,17 +3,15 @@ name = "muxa"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [features]
-# Defines a feature named `webp` that does not enable any other features.
-default = ["sqlite"]
+default = ["sqlite", "zephyr"]
 
 mysql = ["sqlx/mysql"]
 sqlite = ["sqlx/sqlite"]
 
 img_processing = ["dep:turbojpeg", "dep:image"]
 zip = ["dep:zip"]
+zephyr = ["maud/zephyr"]
 
 [dependencies]
 async-session = "3.0.0"
@@ -25,7 +23,9 @@ chrono = "0.4.19"
 futures = "0.3.21"
 http = "0.2.7"
 hyper = "0.14.18"
-maud = { version = "0.23.0" }
+
+maud = { git = "https://github.com/annieversary/maud", rev = "5b0d0e4cd9be12603d3a4b3d375c624701033e02" }
+
 paste = "1.0.6"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.79"

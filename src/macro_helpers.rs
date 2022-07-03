@@ -97,5 +97,11 @@ macro_rules! routes {
               write!(f, "{}", self.to_href())
             }
         }
+
+        impl maud::Render for NamedRoute {
+            fn render_to(&self, w: &mut String) {
+                w.push_str(&self.to_href());
+            }
+        }
     };
 }
