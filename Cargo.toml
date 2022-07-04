@@ -24,7 +24,7 @@ futures = "0.3.21"
 http = "0.2.7"
 hyper = "0.14.18"
 
-maud = { git = "https://github.com/annieversary/maud", rev = "10be2daf09f82f51c388433f26d80d35eba79884" }
+maud = { git = "https://github.com/annieversary/maud", rev = "e6f0e627ef01e3bfc4be44e90d3c505c2a35da1e" }
 
 paste = "1.0.6"
 serde = { version = "1.0", features = ["derive"] }
