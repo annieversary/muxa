@@ -6,6 +6,8 @@ use crate::config::Config;
 pub trait RouterExtension {
     fn static_dir(self, config: &Config, folder_name: &str) -> Self;
     fn static_dirs(self, config: &Config, folders: &[&str]) -> Self;
+    /// mount `Config::get_upload_path` at `path`
+    fn upload_dir(self, config: &Config, path: &str) -> Self;
 }
 
 impl RouterExtension for Router {
@@ -30,6 +32,20 @@ impl RouterExtension for Router {
         }
         self
     }
+
+    fn upload_dir(self, config: &Config, path: &str) -> Self {
+        self.nest(
+            path,
+            get_service(ServeDir::new(&config.get_upload_path())).handle_error(
+                |error: std::io::Error| async move {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("Unhandled internal error: {}", error),
+                    )
+                },
+            ),
+        )
+    }
 }
 
 /// adds the layers required by muxa, plus app-related extensions
@@ -43,16 +59,16 @@ macro_rules! default_layers {
     ) => {
         tower::ServiceBuilder::new()
             .layer(tower_http::trace::TraceLayer::new_for_http())
-            .layer(Extension($pool.clone()))
-            .layer(Extension($config))
+            .layer(axum::extract::Extension($pool.clone()))
+            .layer(axum::extract::Extension($config))
             $(
-                .layer(Extension($ext))
+                .layer(axum::extract::Extension($ext))
             )*
-            .layer(Extension(
+            .layer(axum::extract::Extension(
                 muxa::sessions::DbSessionStore::new($pool).with_same_site(muxa::cookies::SameSite::Lax),
             ))
-            .layer(middleware::from_fn(muxa::sessions::session_middleware))
-            .layer(middleware::from_fn(
+            .layer(axum::middleware::from_fn(muxa::sessions::session_middleware))
+            .layer(axum::middleware::from_fn(
               <$builder as muxa::html::AssociatedMiddleware<_>>::Middleware::html_context_middleware,
             ))
     };
