@@ -43,6 +43,7 @@ validator = { version = "0.14.0", features = ["derive"] }
 turbojpeg = { version = "0.4", features = ["image"], optional = true }
 image = { version = "0.24.2", optional = true }
 zip = { version = "0.6.2", optional = true }
+const-random = "0.1.13"
 
 [dev-dependencies]
 serial_test = "0.6.0"

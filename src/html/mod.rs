@@ -8,6 +8,8 @@ use axum::{
 use maud::{html, Markup, DOCTYPE};
 use std::{collections::HashMap, convert::Infallible, fmt::Debug, marker::PhantomData};
 
+pub mod components;
+
 /// gets inserted as an extension into the request by `HtmlMiddleware`
 /// use the `build` method to provide it the html content
 #[derive(Clone)]

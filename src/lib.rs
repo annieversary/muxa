@@ -32,4 +32,6 @@ pub use paste;
 pub mod reexports {
     pub use axum_extra::routing::TypedPath;
     pub use serde::Deserialize;
+
+    pub use const_random::const_random;
 }
