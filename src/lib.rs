@@ -10,6 +10,7 @@ pub mod errors;
 pub mod extractors;
 pub mod helpers;
 pub mod html;
+pub mod router;
 pub mod sessions;
 pub mod tests;
 pub mod tracing;

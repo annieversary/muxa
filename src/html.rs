@@ -19,6 +19,16 @@ pub struct HtmlContextBuilder<T, R> {
     inner: T,
 }
 
+pub trait AssociatedMiddleware<B> {
+    type Middleware;
+}
+impl<B, T, R> AssociatedMiddleware<B> for HtmlContextBuilder<T, R> {
+    type Middleware = HtmlMiddleware<B, T, R>;
+}
+
+/// we use this and `AssociatedMiddleware` instead of implementing `html_context_middleware`
+/// on `HtmlContextBuilder` directly, because it would require us to add `B` as a generic on the builder,
+/// which doesn't make a ton of sense
 pub struct HtmlMiddleware<B, T, R>(PhantomData<(B, T, R)>);
 
 impl<B, T, R> HtmlMiddleware<B, T, R>
