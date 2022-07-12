@@ -13,6 +13,7 @@ pub mod html;
 pub mod router;
 pub mod sessions;
 pub mod tests;
+pub mod theme;
 pub mod tracing;
 pub mod validation;
 
