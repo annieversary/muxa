@@ -7,7 +7,7 @@ pub trait RouterExtension {
     fn static_dir(self, config: &Config, folder_name: &str) -> Self;
     fn static_dirs(self, config: &Config, folders: &[&str]) -> Self;
     /// mount `Config::get_upload_path` at `path`
-    fn upload_dir(self, config: &Config, path: &str) -> Self;
+    fn upload_dir(self, config: &Config) -> Self;
 }
 
 impl RouterExtension for Router {
@@ -33,9 +33,11 @@ impl RouterExtension for Router {
         self
     }
 
-    fn upload_dir(self, config: &Config, path: &str) -> Self {
+    /// registers the upload directory at $UPLOAD_ROUTE
+    /// or "/uploaded"
+    fn upload_dir(self, config: &Config) -> Self {
         self.nest(
-            path,
+            config.get_upload_route(),
             get_service(ServeDir::new(&config.get_upload_path())).handle_error(
                 |error: std::io::Error| async move {
                     (

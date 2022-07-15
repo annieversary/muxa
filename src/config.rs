@@ -12,6 +12,8 @@ struct ConfigInner {
     static_path: PathBuf,
     base_url: String,
 
+    upload_route: String,
+
     app_name: String,
 }
 
@@ -20,6 +22,11 @@ impl Config {
     #[must_use]
     pub fn get_upload_path(&self) -> &PathBuf {
         &self.0.upload_path
+    }
+
+    #[must_use]
+    pub fn get_upload_route(&self) -> &str {
+        self.0.upload_route.as_ref()
     }
 
     /// Get a reference to the config inner's base url.
@@ -45,11 +52,13 @@ impl Config {
         static_path: PathBuf,
         base_url: String,
         app_name: String,
+        upload_route: String,
     ) -> Self {
         Self(Arc::new(ConfigInner {
             upload_path,
             static_path,
             base_url,
+            upload_route,
             app_name,
         }))
     }
@@ -58,6 +67,9 @@ impl Config {
     pub fn from_env() -> Self {
         let upload_path = std::env::var("UPLOAD_PATH")
             .expect("failed to get UPLOAD_PATH")
+            .into();
+        let upload_route = std::env::var("UPLOAD_ROUTE")
+            .unwrap_or_else(|_| "/upload".into())
             .into();
         let static_path = std::env::var("STATIC_PATH")
             .expect("failed to get STATIC_PATH")
@@ -68,6 +80,7 @@ impl Config {
             upload_path,
             static_path,
             base_url,
+            upload_route,
             app_name,
         }))
     }
@@ -90,14 +103,14 @@ impl Config {
 
     /// returns a relative url to a file
     /// eg: `/uploaded/aaaaaaaaaa/image.png`
-    pub fn uploaded_url(s: &str) -> String {
-        format!("/uploaded/{s}")
+    pub fn uploaded_url(&self, s: &str) -> String {
+        format!("{}/{s}", self.0.upload_route)
     }
 
     /// returns absolute url to a file
     /// eg: `https://example.com/uploaded/aaaaaaaaaa/image.png`
     pub fn absolute_uploaded_url(&self, s: &str) -> String {
-        self.absolute_url(&Self::uploaded_url(s))
+        self.absolute_url(&self.uploaded_url(s))
     }
     pub fn absolute_url(&self, s: &str) -> String {
         format!("{}{}", self.0.base_url, s)

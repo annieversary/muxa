@@ -44,6 +44,13 @@ where
     ErrResponse::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
 }
 
+/// for when you need to create an error which you know is going to be ignored
+/// usually used as `ok_or_else(empty_error)`
+#[track_caller]
+pub fn empty_error() -> ErrResponse {
+    ErrResponse::new(StatusCode::INTERNAL_SERVER_ERROR, String::new())
+}
+
 impl IntoResponse for ErrResponse {
     fn into_response(self) -> Response {
         if self.status_code == StatusCode::NOT_FOUND {
