@@ -16,10 +16,10 @@ pub struct ErrResponse {
 
 impl ErrResponse {
     #[track_caller]
-    pub fn new(status_code: StatusCode, message: String) -> Self {
+    pub fn new(status_code: StatusCode, message: impl ToString) -> Self {
         Self {
             status_code,
-            message,
+            message: message.to_string(),
             location: Location::caller(),
             backtrace: Backtrace::new(),
         }
