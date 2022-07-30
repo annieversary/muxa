@@ -43,21 +43,35 @@ where
 
         #[derive(Debug, Serialize)]
         #[serde(untagged)]
-        enum Field {
+        enum FieldInner {
             UploadedFile(UploadedFile),
             Text(String),
+        }
+
+        #[derive(Debug, Serialize)]
+        #[serde(untagged)]
+        enum Field {
+            Single(FieldInner),
+            Array(Vec<FieldInner>),
         }
 
         let allowed_fields = struct_fields::<F>();
 
         let mut form: HashMap<String, Field> = HashMap::new();
+
         while let Some(field) = f.next_field().await? {
             let name = field.name().unwrap().to_string();
+            let (name, is_vec) = if let Some(name) = name.strip_suffix("[]") {
+                (name.to_string(), true)
+            } else {
+                (name, false)
+            };
+
             if !allowed_fields.contains(&name.as_str()) {
                 continue;
             }
 
-            if let Some(file_name) = field.file_name() {
+            let new = if let Some(file_name) = field.file_name() {
                 if file_name.is_empty() {
                     continue;
                 }
@@ -70,20 +84,36 @@ where
                 upload_path.push(original_name.clone());
                 stream_to_file(&upload_path, field).await?;
 
-                form.insert(
-                    name,
-                    Field::UploadedFile(UploadedFile {
-                        content_type,
-                        filename: original_name,
-                        upload_path: upload_path
-                            .strip_prefix(&config.get_upload_path())?
-                            .display()
-                            .to_string(),
-                    }),
-                );
+                FieldInner::UploadedFile(UploadedFile {
+                    content_type,
+                    filename: original_name,
+                    upload_path: upload_path
+                        .strip_prefix(&config.get_upload_path())?
+                        .display()
+                        .to_string(),
+                })
             } else {
                 // the field is text
-                form.insert(name, Field::Text(field.text().await?));
+                FieldInner::Text(field.text().await?)
+            };
+
+            // if there was already a file, it's definitely a vec
+            if let Some(f) = form.remove(&name) {
+                let v = match f {
+                    Field::Single(a) => vec![a, new],
+                    Field::Array(mut vec) => {
+                        vec.push(new);
+                        vec
+                    }
+                };
+                form.insert(name, Field::Array(v));
+            } else {
+                let v = if is_vec {
+                    Field::Array(vec![new])
+                } else {
+                    Field::Single(new)
+                };
+                form.insert(name, v);
             }
         }
 
