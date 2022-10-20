@@ -1,8 +1,9 @@
 use axum::{
     async_trait,
-    extract::{FromRequest, RequestParts},
+    extract::FromRequestParts,
     headers::{Cookie, HeaderMapExt},
 };
+use http::request::Parts;
 use std::convert::Infallible;
 
 // TODO we could add something to html, but making it optional would be a big pain in the ass
@@ -21,14 +22,14 @@ pub trait ThemeTrait {
 }
 
 #[async_trait]
-impl<B, T: Default + ThemeTrait> FromRequest<B> for ThemeCookie<T>
+impl<S, T: Default + ThemeTrait> FromRequestParts<S> for ThemeCookie<T>
 where
-    B: Send,
+    S: Send + Sync,
 {
     type Rejection = Infallible;
 
-    async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-        let cookie = req.headers().typed_get::<Cookie>();
+    async fn from_request_parts(req: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+        let cookie = req.headers.typed_get::<Cookie>();
 
         let theme = match cookie {
             Some(cookie) => cookie

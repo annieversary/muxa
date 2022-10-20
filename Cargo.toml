@@ -15,8 +15,8 @@ zephyr = ["maud/zephyr"]
 
 [dependencies]
 async-session = "3.0.0"
-axum = { version = "0.5.1", features = ["headers", "multipart"] }
-axum-extra = { version = "0.2.1", features = ["typed-routing"] }
+axum = { version = "0.6.0-rc.1", features = ["headers", "multipart"] }
+axum-extra = { version = "0.4.0-rc.1", features = ["typed-routing"] }
 backtrace = "0.3.64"
 bytes = "1.1.0"
 chrono = "0.4.19"

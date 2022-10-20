@@ -1,10 +1,11 @@
 use crate::{config::Config, errors::*, sessions::UserSession};
 use axum::{
-    extract::{FromRequest, Query, RequestParts},
+    extract::{FromRequestParts, Query},
     http::Request,
     middleware::Next,
     response::{Html, IntoResponse, Response},
 };
+use http::request::Parts;
 use maud::{html, Markup, DOCTYPE};
 use std::{collections::HashMap, convert::Infallible, fmt::Debug, marker::PhantomData};
 
@@ -36,36 +37,36 @@ pub struct HtmlMiddleware<B, T, R>(PhantomData<(B, T, R)>);
 impl<B, T, R> HtmlMiddleware<B, T, R>
 where
     B: Send,
-    T: FromRequest<B> + Send + Sync + 'static,
-    R: FromRequest<B> + Send + Sync + 'static,
+    T: FromRequestParts<()> + Send + Sync + 'static,
+    R: FromRequestParts<()> + Send + Sync + 'static,
 {
     pub async fn html_context_middleware(req: Request<B>, next: Next<B>) -> impl IntoResponse {
         // extractors need a RequestParts
-        let mut req = RequestParts::new(req);
+        let (mut parts, req) = req.into_parts();
 
-        let Query(query) = Query::<HashMap<String, String>>::from_request(&mut req)
+        let Query(query) = Query::<HashMap<String, String>>::from_request_parts(&mut parts, &())
             .await
             .unwrap();
-        let session_flash = req.extensions().get::<UserSession>().unwrap().get_flash();
-        let config = req.extensions().get::<Config>().unwrap().clone();
-        let inner = T::from_request(&mut req)
+        let session_flash = parts.extensions.get::<UserSession>().unwrap().get_flash();
+        let config = parts.extensions.get::<Config>().unwrap().clone();
+        let inner = T::from_request_parts(&mut parts, &())
             .await
             .ok()
             .expect("inner to be available in the request");
-        let route = R::from_request(&mut req)
+        let route = R::from_request_parts(&mut parts, &())
             .await
             .ok()
             .expect("route to be available in the request");
 
-        let mut req = req.try_into_request()?;
-
-        req.extensions_mut().insert(HtmlContextBuilder {
+        parts.extensions.insert(HtmlContextBuilder {
             query,
             session_flash,
             config,
             route,
             inner,
         });
+
+        let req = Request::from_parts(parts, req);
 
         let res = next.run(req).await;
 
@@ -209,13 +210,13 @@ where
 /// implements `FromRequest` so it can be used in `HtmlContext` and `HtmlContextBuilder`
 pub struct NoRoute;
 #[axum::async_trait]
-impl<B> FromRequest<B> for NoRoute
+impl<S> FromRequestParts<S> for NoRoute
 where
-    B: Send,
+    S: Send + Sync,
 {
     type Rejection = Infallible;
 
-    async fn from_request(_: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(_: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
         Ok(NoRoute)
     }
 }

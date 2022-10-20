@@ -3,10 +3,11 @@ use std::{collections::HashMap, io, path::Path};
 use axum::{
     async_trait,
     body::{Bytes, HttpBody},
-    extract::{FromRequest, RequestParts},
+    extract::FromRequest,
     BoxError,
 };
 use futures::{Stream, TryStreamExt};
+use http::Request;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tokio::{fs::File, io::BufWriter};
 use tokio_util::io::StreamReader;
@@ -24,22 +25,23 @@ pub struct UploadedFile {
 pub struct Multipart<F>(pub F);
 
 #[async_trait]
-impl<F, B> FromRequest<B> for Multipart<F>
+impl<F, B, S> FromRequest<S, B> for Multipart<F>
 where
     F: DeserializeOwned,
     B: HttpBody<Data = Bytes> + Default + Unpin + Send + 'static,
     B::Error: Into<BoxError>,
+    S: Send + Sync,
 {
     type Rejection = ErrResponse;
 
-    async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
+    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
         let config = req
             .extensions()
             .get::<Config>()
             .expect("Config Extension should be added")
             .clone();
 
-        let mut f = axum::extract::multipart::Multipart::from_request(req).await?;
+        let mut f = axum::extract::multipart::Multipart::from_request(req, state).await?;
 
         #[derive(Debug, Serialize)]
         #[serde(untagged)]

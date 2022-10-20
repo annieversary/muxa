@@ -44,6 +44,23 @@ where
     ErrResponse::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
 }
 
+/// Returns a 501 Not Implemented error
+#[track_caller]
+pub fn todo() -> ErrResponse {
+    ErrResponse::new(
+        StatusCode::NOT_IMPLEMENTED,
+        "not yet implemented".to_string(),
+    )
+}
+
+/// Returns a 501 Not Implemented error
+///
+/// Same as `todo()`, but wrapped with Result
+#[track_caller]
+pub fn todo_r<R>() -> Result<R, ErrResponse> {
+    Err(todo())
+}
+
 /// for when you need to create an error which you know is going to be ignored
 /// usually used as `ok_or_else(empty_error)`
 #[track_caller]
