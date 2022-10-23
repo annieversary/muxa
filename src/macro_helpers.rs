@@ -11,7 +11,7 @@ macro_rules! routes {
         }
     )* ) => {
         $crate::paste::paste! {
-            #[derive(Debug, Clone, PartialEq)]
+            #[derive(Debug, Clone, PartialEq, Eq)]
             pub enum NamedRoute {
                 $(
                     $id([<$id Path>]),
@@ -55,7 +55,7 @@ macro_rules! routes {
 
 
             $(
-                #[derive(muxa::reexports::TypedPath, Debug, muxa::reexports::Deserialize, Clone, PartialEq)]
+                #[derive(muxa::reexports::TypedPath, Debug, muxa::reexports::Deserialize, Clone, PartialEq, Eq)]
                 #[typed_path($route)]
                 pub struct [<$id Path>] {
                     $(
