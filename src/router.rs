@@ -15,7 +15,7 @@ impl RouterExtension for Router {
         let mut path = config.get_static_path().clone();
         path.push(folder_name);
 
-        self.nest(
+        self.nest_service(
             &format!("/{folder_name}"),
             get_service(ServeDir::new(path)).handle_error(|error: std::io::Error| async move {
                 (
@@ -36,9 +36,9 @@ impl RouterExtension for Router {
     /// registers the upload directory at $UPLOAD_ROUTE
     /// or "/uploaded"
     fn upload_dir(self, config: &Config) -> Self {
-        self.nest(
+        self.nest_service(
             config.get_upload_route(),
-            get_service(ServeDir::new(&config.get_upload_path())).handle_error(
+            get_service(ServeDir::new(config.get_upload_path())).handle_error(
                 |error: std::io::Error| async move {
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
