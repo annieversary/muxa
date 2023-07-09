@@ -29,7 +29,7 @@ maud = { git = "https://github.com/annieversary/maud", rev = "e39cef7b14485d0514
 paste = "1.0.6"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.79"
-sqlx = { version = "0.5.11", features = ["runtime-tokio-rustls", "chrono"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "chrono"] }
 tokio = { version = "1.17.0", features = ["full"] }
 tokio-util = { version = "0.7.1", features = ["io"] }
 tower = "0.4.12"
@@ -37,7 +37,7 @@ tower-http = { version = "0.2.5", features = ["fs", "trace"] }
 tracing = "0.1.35"
 tracing-appender = "0.2.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
-uuid = { version = "0.8.2", features = ["serde", "v4"] }
+uuid = { version = "1.4.0", features = ["serde", "v4"] }
 validator = { version = "0.14.0", features = ["derive"] }
 
 turbojpeg = { version = "0.4", features = ["image"], optional = true }

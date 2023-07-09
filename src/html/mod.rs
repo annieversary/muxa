@@ -177,12 +177,19 @@ impl<T, R> HtmlContext<T, R> {
             @for i in section {(*i)}
         }
     }
+
+    pub fn into_string(self) -> String
+    where
+        T: Template<R>,
+    {
+        let m = T::base(self);
+        m.into_string()
+    }
 }
 
 impl<T: Template<R>, R> IntoResponse for HtmlContext<T, R> {
     fn into_response(self) -> Response {
-        let m = T::base(self);
-        Html(m.into_string()).into_response()
+        Html(self.into_string()).into_response()
     }
 }
 
