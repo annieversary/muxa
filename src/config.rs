@@ -68,7 +68,8 @@ impl Config {
         let upload_path = std::env::var("UPLOAD_PATH")
             .expect("failed to get UPLOAD_PATH")
             .into();
-        let upload_route = std::env::var("UPLOAD_ROUTE").unwrap_or_else(|_| "/upload".to_string());
+        let upload_route =
+            std::env::var("UPLOAD_ROUTE").unwrap_or_else(|_| "/uploaded".to_string());
         let static_path = std::env::var("STATIC_PATH")
             .expect("failed to get STATIC_PATH")
             .into();

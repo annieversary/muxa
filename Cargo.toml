@@ -19,7 +19,7 @@ axum = { version = "0.6.1", features = ["headers", "multipart"] }
 axum-extra = { version = "0.4.2", features = ["typed-routing"] }
 backtrace = "0.3.64"
 bytes = "1.1.0"
-chrono = "0.4.19"
+chrono = "0.4.42"
 futures = "0.3.21"
 http = "0.2.7"
 hyper = "0.14.18"
@@ -35,7 +35,7 @@ tokio-util = { version = "0.7.1", features = ["io"] }
 tower = "0.4.12"
 tower-http = { version = "0.2.5", features = ["fs", "trace"] }
 tracing = "0.1.35"
-tracing-appender = "0.2.2"
+tracing-appender = "0.2.4"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
 uuid = { version = "1.4.0", features = ["serde", "v4"] }
 validator = { version = "0.14.0", features = ["derive"] }
