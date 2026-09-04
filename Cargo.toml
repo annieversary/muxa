@@ -38,7 +38,7 @@ tracing = "0.1.44"
 tracing-appender = "0.2.5"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "registry"] }
 uuid = { version = "1.26.0", features = ["serde", "v4"] }
-validator = { version = "0.14.0", features = ["derive"] }
+validator = { version = "0.21.0", features = ["derive"] }
 
 turbojpeg = { version = "0.4", features = ["image"], optional = true }
 image = { version = "0.24.2", optional = true }

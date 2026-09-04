@@ -114,6 +114,10 @@ Apps built on muxa will need these edits after picking up the new version:
 - Any direct use of `axum::headers` moves to the `headers` crate.
 - `Template` structs must derive `Clone`, as must the `NamedRoute` type (`routes!`
   already derives it).
+- validator's custom-validator attribute is now
+  `#[validate(custom(function = "muxa::validation::alpha_dash"))]`, not
+  `#[validate(custom = "...")]`. The helper signatures in `src/validation.rs` are
+  unchanged.
 
 ## Verification matrix
 

@@ -218,7 +218,7 @@ impl UserSession {
             .into_iter()
             .map(|(k, v)| {
                 (
-                    k,
+                    k.to_string(),
                     v.iter()
                         .map(|v: &ValidationError| {
                             v.message
@@ -229,7 +229,7 @@ impl UserSession {
                         .collect(),
                 )
             })
-            .collect::<HashMap<&str, Vec<String>>>();
+            .collect::<HashMap<String, Vec<String>>>();
 
         self.errors(r).await
     }
