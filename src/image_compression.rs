@@ -9,6 +9,7 @@ use crate::{
     helpers::copy_extension,
 };
 use image::{
+    codecs::jpeg::JpegEncoder,
     imageops::{resize, FilterType},
     ImageReader,
 };
@@ -27,7 +28,8 @@ pub fn resize_and_compress_image(
     // process
     let img = ImageReader::open(path)?.with_guessed_format()?.decode()?;
     let resized = resize(&img, nwidth, nheight, FilterType::Gaussian);
-    let compressed = turbojpeg::compress_image(&resized, 90, turbojpeg::Subsamp::Sub2x2)?;
+    let mut compressed = Vec::new();
+    JpegEncoder::new_with_quality(&mut compressed, 90).encode_image(&resized)?;
 
     // `filename` came off the wire, so it gets reduced to a single component before
     // it is joined onto the new folder

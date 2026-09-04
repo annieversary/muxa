@@ -26,7 +26,7 @@ Defined in `Cargo.toml`; defaults are `sqlite` + `zephyr`.
 
 - `sqlite` / `mysql`: mutually exclusive. Both define `type DbPool` in `src/sessions.rs` and select the upsert SQL dialect, so enabling both is a compile error. Pick exactly one.
 - `zephyr`: enables `src/css.rs`, which dumps the maud fork's zephyr utility-class inventory to a CSS file.
-- `img_processing`: enables `src/image_compression.rs` (turbojpeg + image).
+- `img_processing`: enables `src/image_compression.rs` (the `image` crate).
 - `zip`: enables `src/zip.rs`.
 
 ## Architecture

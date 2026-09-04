@@ -9,7 +9,7 @@ default = ["sqlite", "zephyr"]
 mysql = ["sqlx/mysql"]
 sqlite = ["sqlx/sqlite"]
 
-img_processing = ["dep:turbojpeg", "dep:image"]
+img_processing = ["dep:image"]
 zip = ["dep:zip"]
 zephyr = ["maud/zephyr"]
 
@@ -40,10 +40,6 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter", "registry"]
 uuid = { version = "1.26.0", features = ["serde", "v4"] }
 validator = { version = "0.21.0", features = ["derive"] }
 
-turbojpeg = { version = "1.5", default-features = false, features = [
-    "image",
-    "pkg-config",
-], optional = true }
 image = { version = "0.25.10", optional = true }
 zip = { version = "8.6", default-features = false, features = ["deflate"], optional = true }
 const-random = "0.1.18"
