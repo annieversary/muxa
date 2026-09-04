@@ -29,7 +29,7 @@ maud = { git = "https://github.com/annieversary/maud", rev = "e39cef7b14485d0514
 paste = "1.0.15"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "chrono"] }
+sqlx = { version = "0.9.0", features = ["runtime-tokio", "tls-rustls", "chrono"] }
 tokio = { version = "1.53.1", features = ["full"] }
 tokio-util = { version = "0.7.19", features = ["io"] }
 tower = "0.5.3"
