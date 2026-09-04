@@ -43,7 +43,9 @@ macro_rules! routes {
                     match path {
                         $(
                             [<$id Path>]::PATH => {
-                                let p = [<$id Path>]::from_request_parts(req, s).await.expect("we have matched the path, so the Path extractor should");
+                                // matching the path doesn't mean the params parse, eg
+                                // "/users/{id}" with an i64 id matches "/users/nope"
+                                let p = [<$id Path>]::from_request_parts(req, s).await.map_err(|_| ())?;
                                 Ok(Self::$id(p))
                             },
                         )*

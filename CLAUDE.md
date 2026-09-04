@@ -45,6 +45,8 @@ Sessions are stored in a `sessions` table (schema in `migrations/sessions.sql`, 
 
 Handlers take `Extension<HtmlContextBuilder<T, R>>`, call `.build(markup)` to get an `HtmlContext`, then chain `with_title`, `with_description`, `with_image`, `section_append` (like Blade's `@push`). `HtmlContext` implements `IntoResponse` when `T: Template<R>`. The app implements `Template` (`head` and `body`, optionally overriding `base`) on its own struct; that struct is the `T` and also must implement `FromRequestParts<()>` and `Clone` so the middleware can construct it per request and store it in the request extensions. `NoRoute` is the placeholder `R` when named routes are not used.
 
+The middleware only inserts the builder when `R` extracts. A request that matched no route, matched a service that is not a named route (a `ServeDir` mount, say), or carries params that fail to parse passes through without one, and the handler's own rejection or the router fallback answers it. Handlers that take `Extension<HtmlContextBuilder<T, R>>` are therefore only reachable on named routes.
+
 ### Named routes (`routes!` macro in `src/macro_helpers.rs`)
 
 `routes! { "/users/{id}" => User { id: i64 } ... }` generates, per entry, a `UserPath` struct deriving axum-extra's `TypedPath`, a `route_user(id)` constructor, and one `NamedRoute` enum with variants for every route. `NamedRoute` implements `FromRequestParts` by matching axum's `MatchedPath`, so it doubles as the `R` in `HtmlContext` for "which page am I on" checks (`matches` ignores params, `PartialEq` includes them). It also implements `maud::Render`, so it can be used directly as an `href` in templates. The macro refers to `muxa::` paths, so it only works from a downstream crate, or from `examples/app.rs`.

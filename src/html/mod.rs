@@ -1,4 +1,4 @@
-use crate::{config::Config, errors::*, sessions::UserSession};
+use crate::{config::Config, sessions::UserSession};
 use axum::{
     extract::{FromRequestParts, Query, Request},
     middleware::Next,
@@ -37,37 +37,38 @@ where
     T: FromRequestParts<()> + Clone + Send + Sync + 'static,
     R: FromRequestParts<()> + Clone + Send + Sync + 'static,
 {
-    pub async fn html_context_middleware(req: Request, next: Next) -> impl IntoResponse {
+    pub async fn html_context_middleware(req: Request, next: Next) -> Response {
         // extractors need a RequestParts
-        let (mut parts, req) = req.into_parts();
+        let (mut parts, body) = req.into_parts();
 
-        let Query(query) = Query::<HashMap<String, String>>::from_request_parts(&mut parts, &())
-            .await
-            .unwrap();
-        let session_flash = parts.extensions.get::<UserSession>().unwrap().get_flash();
-        let config = parts.extensions.get::<Config>().unwrap().clone();
-        let inner = T::from_request_parts(&mut parts, &())
-            .await
-            .ok()
-            .expect("inner to be available in the request");
-        let route = R::from_request_parts(&mut parts, &())
-            .await
-            .ok()
-            .expect("route to be available in the request");
+        // `R` does not extract when the request matched no route, matched one that is
+        // not a named route, or carries params that fail to parse. None of those render
+        // a page, so the builder is left out and the handler or the router's fallback
+        // answers the request.
+        if let Ok(route) = R::from_request_parts(&mut parts, &()).await {
+            let Query(query) =
+                Query::<HashMap<String, String>>::from_request_parts(&mut parts, &())
+                    .await
+                    .unwrap();
+            let session_flash = parts.extensions.get::<UserSession>().unwrap().get_flash();
+            let config = parts.extensions.get::<Config>().unwrap().clone();
+            let inner = T::from_request_parts(&mut parts, &())
+                .await
+                .ok()
+                .expect("inner to be available in the request");
 
-        parts.extensions.insert(HtmlContextBuilder {
-            query,
-            session_flash,
-            config,
-            route,
-            inner,
-        });
+            parts.extensions.insert(HtmlContextBuilder {
+                query,
+                session_flash,
+                config,
+                route,
+                inner,
+            });
+        } else {
+            tracing::debug!(path = %parts.uri.path(), "no named route, skipping html context");
+        }
 
-        let req = Request::from_parts(parts, req);
-
-        let res = next.run(req).await;
-
-        Ok::<_, ErrResponse>(res)
+        next.run(Request::from_parts(parts, body)).await
     }
 }
 
