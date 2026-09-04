@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`muxa` is a small, opinionated Rust library layered on top of axum 0.8 and a fork of maud (`annieversary/maud`, pinned by git rev in `Cargo.toml`). It is a library crate only: there is no binary, no `main.rs`, and no example app in this repo. Downstream apps are scaffolded from [muxa-template](https://github.com/annieversary/muxa-template). The readme is candid that this is early-stage and shaped around the author's own workflow.
+`muxa` is a small, opinionated Rust library layered on top of axum 0.8 and a fork of maud (`annieversary/maud`, pinned by git rev in `Cargo.toml`). It is a library crate: there is no binary and no `main.rs`. `examples/app.rs` is a small app wired up the way muxa expects, kept mainly so the build compiles the `routes!` and `default_layers!` macros, which expand to `muxa::` paths and so cannot be exercised from inside the library. Downstream apps are scaffolded from [muxa-template](https://github.com/annieversary/muxa-template). The readme is candid that this is early-stage and shaped around the author's own workflow.
 
 ## Commands
 
@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 cargo build
 cargo test                       # unit tests live inline in src/ (e.g. src/helpers.rs)
 cargo test test_copy_extension   # run a single test by name
+cargo run --example app          # the example app, on :3000 (sqlite only)
 cargo test --features mysql --no-default-features --features zephyr   # swap sqlite for mysql
 cargo test --all-features        # NOTE: enabling both sqlite and mysql will not compile (see below)
 cargo clippy
@@ -46,7 +47,7 @@ Handlers take `Extension<HtmlContextBuilder<T, R>>`, call `.build(markup)` to ge
 
 ### Named routes (`routes!` macro in `src/macro_helpers.rs`)
 
-`routes! { "/users/{id}" => User { id: i64 } ... }` generates, per entry, a `UserPath` struct deriving axum-extra's `TypedPath`, a `route_user(id)` constructor, and one `NamedRoute` enum with variants for every route. `NamedRoute` implements `FromRequestParts` by matching axum's `MatchedPath`, so it doubles as the `R` in `HtmlContext` for "which page am I on" checks (`matches` ignores params, `PartialEq` includes them). It also implements `maud::Render`, so it can be used directly as an `href` in templates. The macro refers to `muxa::` paths, so it only works from a downstream crate.
+`routes! { "/users/{id}" => User { id: i64 } ... }` generates, per entry, a `UserPath` struct deriving axum-extra's `TypedPath`, a `route_user(id)` constructor, and one `NamedRoute` enum with variants for every route. `NamedRoute` implements `FromRequestParts` by matching axum's `MatchedPath`, so it doubles as the `R` in `HtmlContext` for "which page am I on" checks (`matches` ignores params, `PartialEq` includes them). It also implements `maud::Render`, so it can be used directly as an `href` in templates. The macro refers to `muxa::` paths, so it only works from a downstream crate, or from `examples/app.rs`.
 
 ### Errors (`src/errors.rs`)
 
