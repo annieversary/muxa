@@ -27,7 +27,6 @@ macro_rules! routes {
                 }
             }
 
-            #[axum::async_trait]
             impl<S> axum::extract::FromRequestParts<S> for NamedRoute
             where
                 S: Send + Sync,

@@ -60,6 +60,10 @@ Code changes:
   parameter. Adjust `default_layers!` in `src/router.rs` to match; downstream calls are
   unaffected because the macro lives here. Remove `#[axum::async_trait]` from `NoRoute`;
   axum 0.8 uses native async fn in traits.
+- `src/html/mod.rs`: `http 1`'s `Extensions::insert` requires `Clone`, so
+  `html_context_middleware` now bounds `T: Clone` and `R: Clone`. Extracting
+  `Extension<HtmlContextBuilder<T, R>>` in a handler already required this, so it is
+  not a new constraint in practice. `NoRoute` derives `Clone`.
 - `src/macro_helpers.rs`: remove `#[axum::async_trait]` from the generated
   `FromRequestParts` impl.
 - `src/extractors/multipart.rs`: `FromRequest<S, B>` becomes `FromRequest<S>` taking
@@ -108,6 +112,8 @@ Apps built on muxa will need these edits after picking up the new version:
 - `Template` structs that implement `FromRequestParts` must drop `#[async_trait]`.
 - `Multipart<F>` and `session_middleware` no longer take body generics.
 - Any direct use of `axum::headers` moves to the `headers` crate.
+- `Template` structs must derive `Clone`, as must the `NamedRoute` type (`routes!`
+  already derives it).
 
 ## Verification matrix
 

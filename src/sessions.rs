@@ -1,11 +1,12 @@
 use async_session::Session;
 use axum::{
-    headers::{Cookie, HeaderMapExt},
-    http::{header::SET_COOKIE, HeaderValue, Request, StatusCode},
+    extract::Request,
+    http::{header::SET_COOKIE, HeaderValue, StatusCode},
     middleware::Next,
     response::IntoResponse,
 };
 use chrono::{Duration, NaiveDateTime, Utc};
+use headers::{Cookie, HeaderMapExt};
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -283,7 +284,7 @@ async fn get_session_from_cookie(store: &DbSessionStore, cookie: Option<String>)
     Session::new()
 }
 
-pub async fn session_middleware<B>(mut req: Request<B>, next: Next<B>) -> impl IntoResponse {
+pub async fn session_middleware(mut req: Request, next: Next) -> impl IntoResponse {
     tracing::trace!("starting request");
     let store = req
         .extensions()

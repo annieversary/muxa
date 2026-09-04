@@ -1,6 +1,5 @@
-use async_session::async_trait;
 use axum::{
-    body::{Body, HttpBody},
+    body::Body,
     http::{Request, StatusCode},
     Router,
 };
@@ -61,18 +60,13 @@ impl TestResponse {
     }
 }
 
-#[async_trait]
 pub trait RouterExt {
-    async fn req(self, req: Request<Body>) -> TestResponse;
+    fn req(self, req: Request<Body>) -> impl std::future::Future<Output = TestResponse> + Send;
 }
-#[async_trait]
 impl RouterExt for Router {
     async fn req(self, req: Request<Body>) -> TestResponse {
-        let (parts, mut body) = self.oneshot(req).await.unwrap().into_parts();
-        let output = body.data().await.unwrap().unwrap();
-        TestResponse {
-            parts,
-            bytes: output,
-        }
+        let (parts, body) = self.oneshot(req).await.unwrap().into_parts();
+        let bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap();
+        TestResponse { parts, bytes }
     }
 }

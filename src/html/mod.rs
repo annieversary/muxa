@@ -1,7 +1,6 @@
 use crate::{config::Config, errors::*, sessions::UserSession};
 use axum::{
-    extract::{FromRequestParts, Query},
-    http::Request,
+    extract::{FromRequestParts, Query, Request},
     middleware::Next,
     response::{Html, IntoResponse, Response},
 };
@@ -22,25 +21,23 @@ pub struct HtmlContextBuilder<T, R> {
     inner: T,
 }
 
-pub trait AssociatedMiddleware<B> {
+pub trait AssociatedMiddleware {
     type Middleware;
 }
-impl<B, T, R> AssociatedMiddleware<B> for HtmlContextBuilder<T, R> {
-    type Middleware = HtmlMiddleware<B, T, R>;
+impl<T, R> AssociatedMiddleware for HtmlContextBuilder<T, R> {
+    type Middleware = HtmlMiddleware<T, R>;
 }
 
 /// we use this and `AssociatedMiddleware` instead of implementing `html_context_middleware`
-/// on `HtmlContextBuilder` directly, because it would require us to add `B` as a generic on the builder,
-/// which doesn't make a ton of sense
-pub struct HtmlMiddleware<B, T, R>(PhantomData<(B, T, R)>);
+/// on `HtmlContextBuilder` directly, so that the builder doesn't need to name the middleware
+pub struct HtmlMiddleware<T, R>(PhantomData<(T, R)>);
 
-impl<B, T, R> HtmlMiddleware<B, T, R>
+impl<T, R> HtmlMiddleware<T, R>
 where
-    B: Send,
-    T: FromRequestParts<()> + Send + Sync + 'static,
-    R: FromRequestParts<()> + Send + Sync + 'static,
+    T: FromRequestParts<()> + Clone + Send + Sync + 'static,
+    R: FromRequestParts<()> + Clone + Send + Sync + 'static,
 {
-    pub async fn html_context_middleware(req: Request<B>, next: Next<B>) -> impl IntoResponse {
+    pub async fn html_context_middleware(req: Request, next: Next) -> impl IntoResponse {
         // extractors need a RequestParts
         let (mut parts, req) = req.into_parts();
 
@@ -215,8 +212,8 @@ where
 
 /// for when there is no `NamedRoute` or it isn't wanted
 /// implements `FromRequest` so it can be used in `HtmlContext` and `HtmlContextBuilder`
+#[derive(Clone)]
 pub struct NoRoute;
-#[axum::async_trait]
 impl<S> FromRequestParts<S> for NoRoute
 where
     S: Send + Sync,

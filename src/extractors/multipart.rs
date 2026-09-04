@@ -1,13 +1,11 @@
 use std::{collections::HashMap, io, path::Path};
 
 use axum::{
-    async_trait,
-    body::{Bytes, HttpBody},
-    extract::FromRequest,
+    body::Bytes,
+    extract::{FromRequest, Request},
     BoxError,
 };
 use futures::{Stream, TryStreamExt};
-use http::Request;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tokio::{fs::File, io::BufWriter};
 use tokio_util::io::StreamReader;
@@ -24,17 +22,14 @@ pub struct UploadedFile {
 
 pub struct Multipart<F>(pub F);
 
-#[async_trait]
-impl<F, B, S> FromRequest<S, B> for Multipart<F>
+impl<F, S> FromRequest<S> for Multipart<F>
 where
     F: DeserializeOwned,
-    B: HttpBody<Data = Bytes> + Default + Unpin + Send + 'static,
-    B::Error: Into<BoxError>,
     S: Send + Sync,
 {
     type Rejection = ErrResponse;
 
-    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         let config = req
             .extensions()
             .get::<Config>()

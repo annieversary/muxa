@@ -1,4 +1,4 @@
-use axum::{http::StatusCode, routing::get_service, Router};
+use axum::Router;
 use tower_http::services::ServeDir;
 
 use crate::config::Config;
@@ -15,15 +15,7 @@ impl RouterExtension for Router {
         let mut path = config.get_static_path().clone();
         path.push(folder_name);
 
-        self.nest_service(
-            &format!("/{folder_name}"),
-            get_service(ServeDir::new(path)).handle_error(|error: std::io::Error| async move {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Unhandled internal error: {}", error),
-                )
-            }),
-        )
+        self.nest_service(&format!("/{folder_name}"), ServeDir::new(path))
     }
 
     fn static_dirs(mut self, config: &Config, folders: &[&str]) -> Self {
@@ -38,14 +30,7 @@ impl RouterExtension for Router {
     fn upload_dir(self, config: &Config) -> Self {
         self.nest_service(
             config.get_upload_route(),
-            get_service(ServeDir::new(config.get_upload_path())).handle_error(
-                |error: std::io::Error| async move {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        format!("Unhandled internal error: {}", error),
-                    )
-                },
-            ),
+            ServeDir::new(config.get_upload_path()),
         )
     }
 }
@@ -71,7 +56,7 @@ macro_rules! default_layers {
             ))
             .layer(axum::middleware::from_fn(muxa::sessions::session_middleware))
             .layer(axum::middleware::from_fn(
-              <$builder as muxa::html::AssociatedMiddleware<_>>::Middleware::html_context_middleware,
+              <$builder as muxa::html::AssociatedMiddleware>::Middleware::html_context_middleware,
             ))
     };
 }

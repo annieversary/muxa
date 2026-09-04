@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`muxa` is a small, opinionated Rust library layered on top of axum 0.6 and a fork of maud (`annieversary/maud`, pinned by git rev in `Cargo.toml`). It is a library crate only: there is no binary, no `main.rs`, and no example app in this repo. Downstream apps are scaffolded from [muxa-template](https://github.com/annieversary/muxa-template). The readme is candid that this is early-stage and shaped around the author's own workflow.
+`muxa` is a small, opinionated Rust library layered on top of axum 0.8 and a fork of maud (`annieversary/maud`, pinned by git rev in `Cargo.toml`). It is a library crate only: there is no binary, no `main.rs`, and no example app in this repo. Downstream apps are scaffolded from [muxa-template](https://github.com/annieversary/muxa-template). The readme is candid that this is early-stage and shaped around the author's own workflow.
 
 ## Commands
 
@@ -42,11 +42,11 @@ Sessions are stored in a `sessions` table (schema in `migrations/sessions.sql`, 
 
 ### HTML rendering (`src/html/`)
 
-Handlers take `Extension<HtmlContextBuilder<T, R>>`, call `.build(markup)` to get an `HtmlContext`, then chain `with_title`, `with_description`, `with_image`, `section_append` (like Blade's `@push`). `HtmlContext` implements `IntoResponse` when `T: Template<R>`. The app implements `Template` (`head` and `body`, optionally overriding `base`) on its own struct; that struct is the `T` and also must implement `FromRequestParts<()>` so the middleware can construct it per request. `NoRoute` is the placeholder `R` when named routes are not used.
+Handlers take `Extension<HtmlContextBuilder<T, R>>`, call `.build(markup)` to get an `HtmlContext`, then chain `with_title`, `with_description`, `with_image`, `section_append` (like Blade's `@push`). `HtmlContext` implements `IntoResponse` when `T: Template<R>`. The app implements `Template` (`head` and `body`, optionally overriding `base`) on its own struct; that struct is the `T` and also must implement `FromRequestParts<()>` and `Clone` so the middleware can construct it per request and store it in the request extensions. `NoRoute` is the placeholder `R` when named routes are not used.
 
 ### Named routes (`routes!` macro in `src/macro_helpers.rs`)
 
-`routes! { "/users/:id" => User { id: i64 } ... }` generates, per entry, a `UserPath` struct deriving axum-extra's `TypedPath`, a `route_user(id)` constructor, and one `NamedRoute` enum with variants for every route. `NamedRoute` implements `FromRequestParts` by matching axum's `MatchedPath`, so it doubles as the `R` in `HtmlContext` for "which page am I on" checks (`matches` ignores params, `PartialEq` includes them). It also implements `maud::Render`, so it can be used directly as an `href` in templates. The macro refers to `muxa::` paths, so it only works from a downstream crate.
+`routes! { "/users/{id}" => User { id: i64 } ... }` generates, per entry, a `UserPath` struct deriving axum-extra's `TypedPath`, a `route_user(id)` constructor, and one `NamedRoute` enum with variants for every route. `NamedRoute` implements `FromRequestParts` by matching axum's `MatchedPath`, so it doubles as the `R` in `HtmlContext` for "which page am I on" checks (`matches` ignores params, `PartialEq` includes them). It also implements `maud::Render`, so it can be used directly as an `href` in templates. The macro refers to `muxa::` paths, so it only works from a downstream crate.
 
 ### Errors (`src/errors.rs`)
 

@@ -1,8 +1,5 @@
-use axum::{
-    async_trait,
-    extract::FromRequestParts,
-    headers::{Cookie, HeaderMapExt},
-};
+use axum::extract::FromRequestParts;
+use headers::{Cookie, HeaderMapExt};
 use http::request::Parts;
 use std::convert::Infallible;
 
@@ -21,7 +18,6 @@ pub trait ThemeTrait {
         Self: Sized;
 }
 
-#[async_trait]
 impl<S, T: Default + ThemeTrait> FromRequestParts<S> for ThemeCookie<T>
 where
     S: Send + Sync,

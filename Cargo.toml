@@ -15,13 +15,14 @@ zephyr = ["maud/zephyr"]
 
 [dependencies]
 async-session = "3.0.0"
-axum = { version = "0.6.1", features = ["headers", "multipart"] }
-axum-extra = { version = "0.4.2", features = ["typed-routing"] }
+axum = { version = "0.8.9", features = ["multipart"] }
+axum-extra = { version = "0.12.6", features = ["typed-routing"] }
 backtrace = "0.3.76"
 bytes = "1.12.1"
 chrono = "0.4.45"
 futures = "0.3.34"
-http = "0.2.7"
+headers = "0.4.1"
+http = "1.5.0"
 
 maud = { git = "https://github.com/annieversary/maud", rev = "e39cef7b14485d05146ea1e3da1d4b3c4e21aa9e" }
 
@@ -31,8 +32,8 @@ serde_json = "1.0.151"
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "chrono"] }
 tokio = { version = "1.53.1", features = ["full"] }
 tokio-util = { version = "0.7.19", features = ["io"] }
-tower = "0.4.12"
-tower-http = { version = "0.2.5", features = ["fs", "trace"] }
+tower = "0.5.3"
+tower-http = { version = "0.6.9", features = ["fs", "trace"] }
 tracing = "0.1.44"
 tracing-appender = "0.2.5"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "registry"] }
