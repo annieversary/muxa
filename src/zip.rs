@@ -4,6 +4,7 @@ use std::{
     io::{self, BufReader, BufWriter, Read, Seek, Write},
     path::{Path, PathBuf},
 };
+use zip::write::SimpleFileOptions;
 
 /// adds a file to a zip, returns the name that was used inside the zip
 #[tracing::instrument]
@@ -24,7 +25,7 @@ pub fn add_file_to_zip(
     let file = File::open(file_path)?;
     let mut file = BufReader::new(file);
 
-    zip.start_file(&file_name, Default::default())?;
+    zip.start_file(&file_name, SimpleFileOptions::default())?;
     std::io::copy(&mut file, &mut zip)?;
     zip.finish()?;
 
@@ -77,8 +78,8 @@ pub fn remove_file_from_zip(
         zip::ZipWriter::new(file)
     };
     new_zip.add_directory(
-        &format!("{} - {}", artist_username, song_slug),
-        Default::default(),
+        format!("{} - {}", artist_username, song_slug),
+        SimpleFileOptions::default(),
     )?;
 
     // copy all files from old to new, except `file_name`
@@ -87,7 +88,7 @@ pub fn remove_file_from_zip(
         tracing::debug!("Filename: {}", file.name());
         if file.name() != file_name {
             tracing::debug!("adding file to new zip: {}", file.name());
-            new_zip.start_file(file.name(), Default::default())?;
+            new_zip.start_file(file.name(), SimpleFileOptions::default())?;
             std::io::copy(&mut file, &mut new_zip)?;
         }
     }

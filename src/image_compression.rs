@@ -6,7 +6,7 @@ use crate::{
 };
 use image::{
     imageops::{resize, FilterType},
-    io::Reader as ImageReader,
+    ImageReader,
 };
 
 /// assumes the file is an image

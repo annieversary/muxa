@@ -99,10 +99,14 @@ zip 8:
 image 0.25 and turbojpeg 1.5:
 
 - `image::io::Reader` becomes `image::ImageReader`.
-- turbojpeg 1.5's `image` feature accepts 0.24 to 0.25, so the two line up. This also
-  fixes the pre-existing break noted in the baseline.
-- Verify with `cargo check --features zip,img_processing`. Requires the system
-  `libturbojpeg` (installed here via Homebrew `jpeg-turbo`).
+- turbojpeg 1.5 and muxa then share one `image` 0.25, which fixes the pre-existing
+  break noted in the baseline.
+- turbojpeg 1.5 enables `cmake` by default, which builds libjpeg-turbo from the vendored
+  source and needs `cmake` and `nasm` on the build machine. Use
+  `default-features = false, features = ["image", "pkg-config"]` to keep linking the
+  system `libturbojpeg` the way 0.4 did (installed here via Homebrew `jpeg-turbo`).
+  Dropping the default `require-simd` only affects vendored builds.
+- Verify with `cargo check --features zip,img_processing`.
 
 ### 6. Downstream changes for muxa-template
 
