@@ -32,6 +32,15 @@ muxa::routes! {
     "/upload" => Upload {}
 }
 
+/// `routes!` should expand without the caller importing anything, so this second
+/// invocation lives in a module that imports nothing
+#[allow(dead_code)]
+mod hygiene {
+    muxa::routes! {
+        "/nothing/{slug}" => Nothing { slug: String }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 enum Theme {
     #[default]

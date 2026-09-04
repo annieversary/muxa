@@ -1,7 +1,11 @@
 use std::path::PathBuf;
 
+use axum::http::StatusCode;
+
 use crate::{
-    config::Config, errors::ErrResponse, extractors::multipart::UploadedFile,
+    config::Config,
+    errors::ErrResponse,
+    extractors::multipart::{sanitize_file_name, UploadedFile},
     helpers::copy_extension,
 };
 use image::{
@@ -25,7 +29,11 @@ pub fn resize_and_compress_image(
     let resized = resize(&img, nwidth, nheight, FilterType::Gaussian);
     let compressed = turbojpeg::compress_image(&resized, 90, turbojpeg::Subsamp::Sub2x2)?;
 
-    let filename = copy_extension("image.jpg", &file.filename);
+    // `filename` came off the wire, so it gets reduced to a single component before
+    // it is joined onto the new folder
+    let filename = sanitize_file_name(&file.filename)
+        .ok_or_else(|| ErrResponse::new(StatusCode::BAD_REQUEST, "unusable file name"))?;
+    let filename = copy_extension("image.jpg", &filename);
     let mut upload_path = config.get_random_folder()?;
     upload_path.push(filename);
 

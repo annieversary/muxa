@@ -57,7 +57,11 @@ where
         let mut form: HashMap<String, Field> = HashMap::new();
 
         while let Some(field) = f.next_field().await? {
-            let name = field.name().unwrap().to_string();
+            // a part without a name can't be matched against the struct, so skip it
+            let Some(name) = field.name() else {
+                continue;
+            };
+            let name = name.to_string();
             let (name, is_vec) = if let Some(name) = name.strip_suffix("[]") {
                 (name.to_string(), true)
             } else {
@@ -69,23 +73,27 @@ where
             }
 
             let new = if let Some(file_name) = field.file_name() {
-                if file_name.is_empty() {
+                // the name is client supplied, so it has to be reduced to a single
+                // component before it is joined onto the upload directory
+                let Some(original_name) = sanitize_file_name(file_name) else {
                     continue;
-                }
+                };
 
                 // the field is file
-                let original_name: String = file_name.to_string();
-                let content_type = field.content_type().unwrap().to_string();
+                let content_type = field
+                    .content_type()
+                    .unwrap_or("application/octet-stream")
+                    .to_string();
 
                 let mut upload_path = config.get_random_folder()?;
-                upload_path.push(original_name.clone());
+                upload_path.push(&original_name);
                 stream_to_file(&upload_path, field).await?;
 
                 FieldInner::UploadedFile(UploadedFile {
                     content_type,
                     filename: original_name,
                     upload_path: upload_path
-                        .strip_prefix(&config.get_upload_path())?
+                        .strip_prefix(config.get_upload_path())?
                         .display()
                         .to_string(),
                 })
@@ -124,6 +132,20 @@ where
     }
 }
 
+/// reduces a client supplied file name to a single path component, so that it can
+/// never escape the directory it gets joined onto. returns `None` when nothing usable
+/// is left, eg for `""`, `".."` or `"foo/"`
+pub fn sanitize_file_name(file_name: &str) -> Option<String> {
+    // windows clients send backslash separated paths, which unix treats as a normal char
+    let last = file_name.rsplit(['/', '\\']).next()?;
+
+    if last.is_empty() || last == "." || last == ".." {
+        return None;
+    }
+
+    Some(last.to_string())
+}
+
 // Save a `Stream` to a file
 async fn stream_to_file<S, E>(path: &Path, stream: S) -> Result<(), io::Error>
 where
@@ -131,7 +153,7 @@ where
     E: Into<BoxError>,
 {
     // Convert the stream into an `AsyncRead`.
-    let body_with_io_error = stream.map_err(|err| io::Error::new(io::ErrorKind::Other, err));
+    let body_with_io_error = stream.map_err(io::Error::other);
     let body_reader = StreamReader::new(body_with_io_error);
     futures::pin_mut!(body_reader);
 
@@ -142,4 +164,29 @@ where
     tokio::io::copy(&mut body_reader, &mut file).await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sanitize_file_name;
+
+    #[test]
+    fn test_sanitize_file_name() {
+        assert_eq!(
+            sanitize_file_name("hello.png").as_deref(),
+            Some("hello.png")
+        );
+        assert_eq!(
+            sanitize_file_name("../../etc/passwd").as_deref(),
+            Some("passwd")
+        );
+        assert_eq!(sanitize_file_name("/etc/passwd").as_deref(), Some("passwd"));
+        assert_eq!(
+            sanitize_file_name(r"C:\windows\system32\evil.dll").as_deref(),
+            Some("evil.dll")
+        );
+        assert_eq!(sanitize_file_name(".."), None);
+        assert_eq!(sanitize_file_name("a/b/"), None);
+        assert_eq!(sanitize_file_name(""), None);
+    }
 }

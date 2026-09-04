@@ -46,16 +46,25 @@ where
         // a page, so the builder is left out and the handler or the router's fallback
         // answers the request.
         if let Ok(route) = R::from_request_parts(&mut parts, &()).await {
-            let Query(query) =
-                Query::<HashMap<String, String>>::from_request_parts(&mut parts, &())
-                    .await
-                    .unwrap();
-            let session_flash = parts.extensions.get::<UserSession>().unwrap().get_flash();
-            let config = parts.extensions.get::<Config>().unwrap().clone();
-            let inner = T::from_request_parts(&mut parts, &())
+            // a query string that doesn't deserialize into a map isn't worth failing
+            // the request over, the handler can still read the raw uri
+            let query = Query::<HashMap<String, String>>::from_request_parts(&mut parts, &())
                 .await
-                .ok()
-                .expect("inner to be available in the request");
+                .map(|Query(query)| query)
+                .unwrap_or_default();
+            let session_flash = parts
+                .extensions
+                .get::<UserSession>()
+                .expect("`session_middleware` must run before `html_context_middleware`")
+                .get_flash();
+            let config = parts
+                .extensions
+                .get::<Config>()
+                .expect("`Config` extension missing")
+                .clone();
+            let Ok(inner) = T::from_request_parts(&mut parts, &()).await else {
+                panic!("the template type must be extractable on every named route");
+            };
 
             parts.extensions.insert(HtmlContextBuilder {
                 query,

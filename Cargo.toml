@@ -54,3 +54,7 @@ serial_test = "4.0.1"
 [[example]]
 name = "app"
 required-features = ["sqlite"]
+
+[[test]]
+name = "pipeline"
+required-features = ["sqlite"]

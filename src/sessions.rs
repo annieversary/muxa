@@ -32,6 +32,9 @@ const ERRORS_KEY_TRACKER: &str = "internal-key-errors-tracker";
 const OLD_KEY: &str = "internal-key-old";
 const OLD_KEY_TRACKER: &str = "internal-key-old-tracker";
 
+/// how long a session lives, used for both the cookie and the `expires` column
+const SESSION_MAX_AGE: Duration = Duration::days(180);
+
 #[cfg(feature = "mysql")]
 type DbPool = sqlx::MySqlPool;
 #[cfg(feature = "sqlite")]
@@ -107,7 +110,7 @@ impl DbSessionStore {
         sqlx::query(q)
             .bind(session.id().to_string())
             .bind(&session_string)
-            .bind(Utc::now() + Duration::days(180))
+            .bind(Utc::now() + SESSION_MAX_AGE)
             .execute(&self.pool)
             .await?;
 
@@ -143,11 +146,11 @@ impl UserSession {
             .expect("calling save_and_get_cookie on a cloned session, this is not allowed");
         HeaderValue::from_str(
             format!(
-                "{}={}; SameSite={}; Secure; Path=/; Max-Age={};",
+                "{}={}; SameSite={}; Secure; HttpOnly; Path=/; Max-Age={};",
                 SESSION_COOKIE_NAME,
                 cookie,
                 self.store.same_site,
-                60 * 60 * 24 * 360
+                SESSION_MAX_AGE.num_seconds()
             )
             .as_str(),
         )
@@ -167,7 +170,7 @@ impl UserSession {
         value: impl serde::Serialize,
     ) -> Result<(), ErrResponse> {
         self.session.insert(key, value)?;
-        self.clone().save().await
+        self.save().await
     }
 
     pub fn get<T: serde::de::DeserializeOwned>(&self, key: &str) -> Option<T> {
@@ -176,13 +179,13 @@ impl UserSession {
 
     pub async fn remove(&mut self, key: &str) -> Result<(), ErrResponse> {
         self.session.remove(key);
-        self.clone().save().await
+        self.save().await
     }
 
     pub async fn flash(&mut self, value: impl AsRef<str>) -> Result<(), ErrResponse> {
         self.session.insert(FLASH_KEY, value.as_ref())?;
         self.session.insert(FLASH_KEY_TRACKER, true)?;
-        self.clone().save().await
+        self.save().await
     }
 
     pub fn get_flash(&self) -> Option<String> {
@@ -209,7 +212,7 @@ impl UserSession {
             .collect();
         self.session.insert(ERRORS_KEY, map)?;
         self.session.insert(ERRORS_KEY_TRACKER, true)?;
-        self.clone().save().await
+        self.save().await
     }
 
     pub async fn validation_errors(&mut self, value: ValidationErrors) -> Result<(), ErrResponse> {
@@ -234,17 +237,17 @@ impl UserSession {
         self.errors(r).await
     }
 
-    pub async fn get_errors(&mut self) -> Result<HashMap<String, Vec<String>>, ErrResponse> {
+    pub async fn get_errors(&self) -> Result<HashMap<String, Vec<String>>, ErrResponse> {
         Ok(self.session.get(ERRORS_KEY).unwrap_or_default())
     }
 
     pub async fn old<T: Serialize>(&mut self, old: T) -> Result<(), ErrResponse> {
         self.session.insert(OLD_KEY, old)?;
         self.session.insert(OLD_KEY_TRACKER, true)?;
-        self.clone().save().await
+        self.save().await
     }
 
-    pub fn get_old(&mut self) -> Result<HashMap<String, String>, ErrResponse> {
+    pub fn get_old(&self) -> Result<HashMap<String, String>, ErrResponse> {
         let old: HashMap<String, Value> = match self.session.get(OLD_KEY) {
             Some(s) => s,
             None => return Ok(Default::default()),

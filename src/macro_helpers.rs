@@ -27,14 +27,14 @@ macro_rules! routes {
                 }
             }
 
-            impl<S> axum::extract::FromRequestParts<S> for NamedRoute
+            impl<S> $crate::reexports::axum::extract::FromRequestParts<S> for NamedRoute
             where
                 S: Send + Sync,
             {
                 type Rejection = ();
 
-                async fn from_request_parts(req: &mut http::request::Parts, s: &S) -> Result<Self, Self::Rejection> {
-                    let path = if let Some(path) = req.extensions.get::<axum::extract::MatchedPath>() {
+                async fn from_request_parts(req: &mut $crate::reexports::http::request::Parts, s: &S) -> Result<Self, Self::Rejection> {
+                    let path = if let Some(path) = req.extensions.get::<$crate::reexports::axum::extract::MatchedPath>() {
                         path.as_str()
                     } else {
                         return Err(());
@@ -42,10 +42,12 @@ macro_rules! routes {
 
                     match path {
                         $(
-                            [<$id Path>]::PATH => {
+                            <[<$id Path>] as $crate::reexports::TypedPath>::PATH => {
                                 // matching the path doesn't mean the params parse, eg
                                 // "/users/{id}" with an i64 id matches "/users/nope"
-                                let p = [<$id Path>]::from_request_parts(req, s).await.map_err(|_| ())?;
+                                let p = <[<$id Path>] as $crate::reexports::axum::extract::FromRequestParts<S>>::from_request_parts(req, s)
+                                    .await
+                                    .map_err(|_| ())?;
                                 Ok(Self::$id(p))
                             },
                         )*
@@ -56,7 +58,7 @@ macro_rules! routes {
 
 
             $(
-                #[derive(muxa::reexports::TypedPath, Debug, muxa::reexports::Deserialize, Clone, PartialEq, Eq)]
+                #[derive($crate::reexports::TypedPath, Debug, $crate::reexports::Deserialize, Clone, PartialEq, Eq)]
                 #[typed_path($route)]
                 pub struct [<$id Path>] {
                     $(
@@ -81,8 +83,8 @@ macro_rules! routes {
         }
 
         impl NamedRoute {
-            pub fn redirect(&self) -> axum::response::Redirect {
-                axum::response::Redirect::to(&self.to_href())
+            pub fn redirect(&self) -> $crate::reexports::axum::response::Redirect {
+                $crate::reexports::axum::response::Redirect::to(&self.to_href())
             }
 
             /// returns true if the routes are the same, ignoring the params
@@ -99,7 +101,7 @@ macro_rules! routes {
             }
         }
 
-        impl maud::Render for NamedRoute {
+        impl $crate::reexports::maud::Render for NamedRoute {
             fn render_to(&self, w: &mut String) {
                 w.push_str(&self.to_href());
             }

@@ -1,11 +1,21 @@
 use std::path::PathBuf;
 use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{
+    filter::LevelFilter, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter,
+};
 
+/// reads the filter from `LOG_LEVEL`, defaulting to `info` so that an unset variable
+/// doesn't silence everything, error responses included
 pub fn setup_tracing(log_path: PathBuf) -> WorkerGuard {
-    let log_filter = EnvFilter::from_env("LOG_LEVEL");
+    let log_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .with_env_var("LOG_LEVEL")
+        .from_env_lossy();
     #[allow(unused_variables)]
-    let error_filter = EnvFilter::from_env("ERROR_LEVEL");
+    let error_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::ERROR.into())
+        .with_env_var("ERROR_LEVEL")
+        .from_env_lossy();
 
     // normal logging
     let t = tracing_subscriber::registry().with(log_filter);

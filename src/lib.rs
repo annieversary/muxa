@@ -24,15 +24,22 @@ pub mod image_compression;
 #[cfg(feature = "zip")]
 pub mod zip;
 
-#[macro_use]
+// the macros in here are `#[macro_export]`ed, so they already live at the crate root
 pub mod macro_helpers;
-pub use macro_helpers::*;
 
 pub use paste;
 
+/// everything the `routes!` and `default_layers!` macros expand to, so that a crate
+/// using them only needs to depend on muxa
 pub mod reexports {
     pub use axum_extra::routing::TypedPath;
     pub use serde::Deserialize;
 
     pub use const_random::const_random;
+
+    pub use axum;
+    pub use http;
+    pub use maud;
+    pub use tower;
+    pub use tower_http;
 }

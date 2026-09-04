@@ -68,7 +68,7 @@ where
     let _ = T::deserialize(StructFieldsDeserializer {
         fields: &mut fields,
     });
-    fields.unwrap()
+    fields.expect("`struct_fields` only works on structs with named fields")
 }
 
 /// copies the extension from one file to another
@@ -83,14 +83,17 @@ pub fn copy_extension(from: &str, to: &str) -> PathBuf {
     }
 }
 
-/// truncates to length, and appends "..." if anything was removed
+/// truncates to `len` chars, and appends "..." if anything was removed
 pub fn truncate_to_length(s: &str, len: usize) -> Cow<'_, str> {
-    if s.len() > len {
-        let mut s = s.chars().take(len).collect::<String>();
-        s.push_str("...");
-        Cow::Owned(s)
-    } else {
-        Cow::Borrowed(s)
+    // char_indices rather than len(), so that a multi byte string isn't reported as
+    // truncated when it fits
+    match s.char_indices().nth(len) {
+        Some((idx, _)) => {
+            let mut out = s[..idx].to_string();
+            out.push_str("...");
+            Cow::Owned(out)
+        }
+        None => Cow::Borrowed(s),
     }
 }
 
@@ -102,6 +105,16 @@ mod tests {
     fn test_empty() {
         assert_eq!(empty("".to_string()), None);
         assert_eq!(empty("hey".to_string()), Some("hey".to_string()));
+    }
+
+    #[test]
+    fn test_truncate_to_length() {
+        assert_eq!(truncate_to_length("hello", 10), "hello");
+        assert_eq!(truncate_to_length("hello", 5), "hello");
+        assert_eq!(truncate_to_length("hello", 3), "hel...");
+        // 6 bytes, 3 chars: fits, so it must not gain an ellipsis
+        assert_eq!(truncate_to_length("áéí", 3), "áéí");
+        assert_eq!(truncate_to_length("áéí", 2), "áé...");
     }
 
     #[test]

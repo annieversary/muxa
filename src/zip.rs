@@ -27,7 +27,8 @@ pub fn add_file_to_zip(
 
     zip.start_file(&file_name, SimpleFileOptions::default())?;
     std::io::copy(&mut file, &mut zip)?;
-    zip.finish()?;
+    // BufWriter swallows errors when it flushes on drop, so it gets flushed by hand
+    zip.finish()?.flush()?;
 
     Ok(file_name)
 }
@@ -40,8 +41,12 @@ pub fn deal_with_duplicates(zip_path: &Path, mut path: PathBuf) -> Result<PathBu
 
     while zip.by_name(&path.display().to_string()).is_ok() {
         let mut name = path.file_stem().unwrap_or_default().to_os_string();
-        name.push("-copy.");
-        name.push(path.extension().unwrap_or_default());
+        name.push("-copy");
+        // an extensionless name would otherwise come out with a trailing dot
+        if let Some(ext) = path.extension() {
+            name.push(".");
+            name.push(ext);
+        }
         path = path.with_file_name(name);
     }
 
@@ -60,20 +65,42 @@ pub fn remove_file_from_zip(
     // NOTE: there's no way to just remove a file, so we have to create a new one
     // https://github.com/zip-rs/zip/issues/283
 
-    // move existing zip to old.zip
-    let old_zip_path = zip_path.with_file_name("old.zip");
-    rename(&zip_path, &old_zip_path)?;
+    // the new zip is built next to the old one under a unique name and only moved into
+    // place once it is complete, so a failure part way through leaves the original alone
+    let new_zip_path = zip_path.with_file_name(format!("new-{}.zip", uuid::Uuid::new_v4()));
 
-    // open old zip as reader
+    let res = write_zip_without(
+        file_name,
+        zip_path,
+        &new_zip_path,
+        artist_username,
+        song_slug,
+    );
+    if res.is_err() {
+        let _ = std::fs::remove_file(&new_zip_path);
+        return res;
+    }
+
+    rename(&new_zip_path, zip_path)?;
+
+    Ok(())
+}
+
+fn write_zip_without(
+    file_name: &str,
+    zip_path: &Path,
+    new_zip_path: &Path,
+    artist_username: &str,
+    song_slug: &str,
+) -> Result<(), ErrResponse> {
     let mut old_zip = {
-        let file = File::open(&old_zip_path)?;
+        let file = File::open(zip_path)?;
         let file = BufReader::new(file);
         zip::ZipArchive::new(file)?
     };
 
-    // create new zip
     let mut new_zip = {
-        let file = std::fs::File::create(&zip_path).unwrap();
+        let file = File::create(new_zip_path)?;
         let file = BufWriter::new(file);
         zip::ZipWriter::new(file)
     };
@@ -92,10 +119,9 @@ pub fn remove_file_from_zip(
             std::io::copy(&mut file, &mut new_zip)?;
         }
     }
-    new_zip.finish()?;
 
-    // it's not a big issue if we fail to remove old.zip
-    let _ = std::fs::remove_file(old_zip_path);
+    // BufWriter swallows errors when it flushes on drop, so it gets flushed by hand
+    new_zip.finish()?.flush()?;
 
     Ok(())
 }

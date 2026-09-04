@@ -44,19 +44,22 @@ macro_rules! default_layers {
       config: $config:expr,
       extensions: [ $($ext:expr),* $(,)? ],
     ) => {
-        tower::ServiceBuilder::new()
-            .layer(tower_http::trace::TraceLayer::new_for_http())
-            .layer(axum::extract::Extension($pool.clone()))
-            .layer(axum::extract::Extension($config))
+        $crate::reexports::tower::ServiceBuilder::new()
+            .layer($crate::reexports::tower_http::trace::TraceLayer::new_for_http())
+            .layer($crate::reexports::axum::extract::Extension($pool.clone()))
+            .layer($crate::reexports::axum::extract::Extension($config))
             $(
-                .layer(axum::extract::Extension($ext))
+                .layer($crate::reexports::axum::extract::Extension($ext))
             )*
-            .layer(axum::extract::Extension(
-                muxa::sessions::DbSessionStore::new($pool).with_same_site(muxa::cookies::SameSite::Lax),
+            .layer($crate::reexports::axum::extract::Extension(
+                $crate::sessions::DbSessionStore::new($pool)
+                    .with_same_site($crate::cookies::SameSite::Lax),
             ))
-            .layer(axum::middleware::from_fn(muxa::sessions::session_middleware))
-            .layer(axum::middleware::from_fn(
-              <$builder as muxa::html::AssociatedMiddleware>::Middleware::html_context_middleware,
+            .layer($crate::reexports::axum::middleware::from_fn(
+                $crate::sessions::session_middleware,
+            ))
+            .layer($crate::reexports::axum::middleware::from_fn(
+                <$builder as $crate::html::AssociatedMiddleware>::Middleware::html_context_middleware,
             ))
     };
 }
