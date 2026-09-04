@@ -180,6 +180,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .execute(&pool)
     .await?;
 
+    // a row is written for every visitor, so something has to clear out the dead ones
+    let _pruner = muxa::sessions::DbSessionStore::new(pool.clone())
+        .spawn_pruner(muxa::sessions::DEFAULT_PRUNE_INTERVAL);
+
     let app = Router::new()
         .route(HomePath::PATH, get(home))
         .route(UserPath::PATH, get(user))

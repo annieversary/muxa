@@ -41,6 +41,8 @@ The library assumes a specific request pipeline. Everything is wired together by
 
 Sessions are stored in a `sessions` table (schema in `migrations/sessions.sql`, MySQL syntax; adapt for sqlite). `UserSession` exposes Laravel-style one-request-lifetime helpers: `flash`, `errors` / `validation_errors`, and `old` (previous form input). Each sets a companion "tracker" key. `session_middleware` removes any of these keys whose tracker was not set during the current request, which is how they survive exactly one redirect. Every mutating method on `UserSession` saves to the DB immediately.
 
+A row is written for every request, including ones from visitors that never come back, and nothing removes them on its own. `DbSessionStore::prune_expired` deletes the rows whose `expires` has passed, and `spawn_pruner` runs it on a timer; `default_layers!` builds its own store, so an app has to call `spawn_pruner` itself (see `examples/app.rs`).
+
 ### HTML rendering (`src/html/`)
 
 Handlers take `Extension<HtmlContextBuilder<T, R>>`, call `.build(markup)` to get an `HtmlContext`, then chain `with_title`, `with_description`, `with_image`, `section_append` (like Blade's `@push`). `HtmlContext` implements `IntoResponse` when `T: Template<R>`. The app implements `Template` (`head` and `body`, optionally overriding `base`) on its own struct; that struct is the `T` and also must implement `FromRequestParts<()>` and `Clone` so the middleware can construct it per request and store it in the request extensions. `NoRoute` is the placeholder `R` when named routes are not used.

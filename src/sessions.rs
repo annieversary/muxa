@@ -35,6 +35,9 @@ const OLD_KEY_TRACKER: &str = "internal-key-old-tracker";
 /// how long a session lives, used for both the cookie and the `expires` column
 const SESSION_MAX_AGE: Duration = Duration::days(180);
 
+/// how often `DbSessionStore::spawn_pruner` clears out expired sessions by default
+pub const DEFAULT_PRUNE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(6 * 60 * 60);
+
 #[cfg(feature = "mysql")]
 type DbPool = sqlx::MySqlPool;
 #[cfg(feature = "sqlite")]
@@ -115,6 +118,56 @@ impl DbSessionStore {
             .await?;
 
         Ok(session.into_cookie_value())
+    }
+
+    /// deletes every session row that has already expired, returns how many went
+    ///
+    /// a row's `expires` is pushed forward on every save, so a session is only ever
+    /// removed once it has gone `SESSION_MAX_AGE` without a request. rows with a null
+    /// `expires` never expire, matching what `load_session` accepts
+    pub async fn prune_expired(&self) -> Result<u64, ErrResponse> {
+        let res = sqlx::query("DELETE FROM sessions WHERE expires IS NOT NULL AND expires < ?")
+            .bind(Utc::now())
+            .execute(&self.pool)
+            .await?;
+
+        Ok(res.rows_affected())
+    }
+
+    /// spawns a task that calls `prune_expired` every `interval`, starting immediately.
+    /// without this, a row is written for every visitor and nothing ever removes them
+    ///
+    /// `default_layers!` builds its own store, so this has to be called separately,
+    /// usually on a store made from the same pool:
+    ///
+    /// ```no_run
+    /// # fn f(store: muxa::sessions::DbSessionStore) {
+    /// use muxa::sessions::DEFAULT_PRUNE_INTERVAL;
+    ///
+    /// let _pruner = store.spawn_pruner(DEFAULT_PRUNE_INTERVAL);
+    /// # }
+    /// ```
+    ///
+    /// dropping the returned handle leaves the task running, keep it to `abort()`
+    pub fn spawn_pruner(&self, interval: std::time::Duration) -> tokio::task::JoinHandle<()> {
+        let store = self.clone();
+
+        tokio::spawn(async move {
+            let mut ticker = tokio::time::interval(interval);
+            // a tick that comes late shouldn't cause a burst of catch up runs
+            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+
+            loop {
+                // the first tick resolves immediately
+                ticker.tick().await;
+
+                match store.prune_expired().await {
+                    Ok(0) => tracing::trace!("no expired sessions to prune"),
+                    Ok(n) => tracing::info!("pruned {n} expired sessions"),
+                    Err(err) => tracing::error!("failed to prune sessions: {err:?}"),
+                }
+            }
+        })
     }
 }
 

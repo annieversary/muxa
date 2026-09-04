@@ -7,6 +7,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use chrono::{Duration, Utc};
 use http::request::Parts;
 use maud::{html, Markup};
 use muxa::{
@@ -15,11 +16,11 @@ use muxa::{
     extractors::multipart::{Multipart, UploadedFile},
     html::{HtmlContext, HtmlContextBuilder, Template},
     reexports::TypedPath,
-    sessions::UserSession,
+    sessions::{DbSessionStore, UserSession},
     tests::helpers::{empty_get, RouterExt},
 };
 use serde::Deserialize;
-use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use std::{convert::Infallible, path::PathBuf};
 
 muxa::routes! {
@@ -77,16 +78,8 @@ async fn upload(
     Ok(route_home().redirect())
 }
 
-async fn app(upload_path: PathBuf) -> Router {
-    let config = Config::new(
-        upload_path,
-        "static".into(),
-        "http://example.com".to_string(),
-        "muxa test".to_string(),
-        "/uploaded".to_string(),
-    );
-
-    // one connection, so every query sees the same in-memory database
+/// one connection, so every query sees the same in-memory database
+async fn pool() -> SqlitePool {
     let pool = SqlitePoolOptions::new()
         .max_connections(1)
         .connect("sqlite::memory:")
@@ -102,6 +95,22 @@ async fn app(upload_path: PathBuf) -> Router {
     .execute(&pool)
     .await
     .unwrap();
+
+    pool
+}
+
+async fn app(upload_path: PathBuf) -> Router {
+    app_with(upload_path, pool().await)
+}
+
+fn app_with(upload_path: PathBuf, pool: SqlitePool) -> Router {
+    let config = Config::new(
+        upload_path,
+        "static".into(),
+        "http://example.com".to_string(),
+        "muxa test".to_string(),
+        "/uploaded".to_string(),
+    );
 
     Router::new()
         .route(HomePath::PATH, get(home))
@@ -231,6 +240,95 @@ async fn upload_with_an_unusable_name_is_skipped() {
     let res = app(dir.clone()).await.req(req).await;
     assert_eq!(res.status(), http::StatusCode::SEE_OTHER);
     assert_eq!(walk(&dir).count(), 0);
+}
+
+#[tokio::test]
+async fn pruning_only_removes_expired_sessions() {
+    let pool = pool().await;
+    let store = DbSessionStore::new(pool.clone());
+
+    let rows = [
+        ("stale", Utc::now() - Duration::days(1)),
+        ("just-expired", Utc::now() - Duration::seconds(1)),
+        ("live", Utc::now() + Duration::days(180)),
+    ];
+    for (id, expires) in rows {
+        sqlx::query("INSERT INTO sessions (id, expires, session) VALUES (?, ?, ?)")
+            .bind(id)
+            .bind(expires)
+            .bind("{}")
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    assert_eq!(store.prune_expired().await.unwrap(), 2);
+
+    let left: Vec<String> = sqlx::query_scalar("SELECT id FROM sessions")
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+    assert_eq!(left, ["live"]);
+
+    // nothing left to remove, so a second run is a no-op
+    assert_eq!(store.prune_expired().await.unwrap(), 0);
+}
+
+/// the sqlite backend stores `expires` as text, so pruning is a string comparison.
+/// this checks it against a row the store actually wrote, not a hand made one, because
+/// a format mismatch here would delete live sessions
+#[tokio::test]
+async fn pruning_keeps_a_session_the_store_just_wrote() {
+    let pool = pool().await;
+    let store = DbSessionStore::new(pool.clone());
+
+    let res = app_with(upload_dir("prune-live"), pool.clone())
+        .req(empty_get("/"))
+        .await;
+    assert!(res.is_ok());
+
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM sessions")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 1, "the request should have written a session");
+
+    assert_eq!(store.prune_expired().await.unwrap(), 0);
+}
+
+/// the pruner runs once as soon as it is spawned, rather than waiting out a full interval
+#[tokio::test]
+async fn spawned_pruner_runs_immediately() {
+    let pool = pool().await;
+    let store = DbSessionStore::new(pool.clone());
+
+    sqlx::query("INSERT INTO sessions (id, expires, session) VALUES (?, ?, ?)")
+        .bind("stale")
+        .bind(Utc::now() - Duration::days(1))
+        .bind("{}")
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let pruner = store.spawn_pruner(std::time::Duration::from_secs(3600));
+
+    let count = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        loop {
+            let count: i64 = sqlx::query_scalar("SELECT count(*) FROM sessions")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            if count == 0 {
+                return count;
+            }
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("the pruner should have run without waiting for the second tick");
+
+    assert_eq!(count, 0);
+    pruner.abort();
 }
 
 fn walk(dir: &std::path::Path) -> impl Iterator<Item = PathBuf> + '_ {
