@@ -104,19 +104,19 @@ fn write_zip_without(
         let file = BufWriter::new(file);
         zip::ZipWriter::new(file)
     };
-    new_zip.add_directory(
-        format!("{} - {}", artist_username, song_slug),
-        SimpleFileOptions::default(),
-    )?;
 
-    // copy all files from old to new, except `file_name`
+    // entries are copied over verbatim, so the directory entry only needs adding when the
+    // old zip did not already have one; adding it twice is a duplicate-name error
+    let dir_name = format!("{} - {}/", artist_username, song_slug);
+    if old_zip.by_name(&dir_name).is_err() {
+        new_zip.add_directory(dir_name, SimpleFileOptions::default())?;
+    }
+
     for i in 0..old_zip.len() {
-        let mut file = old_zip.by_index(i)?;
-        tracing::debug!("Filename: {}", file.name());
+        let file = old_zip.by_index_raw(i)?;
         if file.name() != file_name {
             tracing::debug!("adding file to new zip: {}", file.name());
-            new_zip.start_file(file.name(), SimpleFileOptions::default())?;
-            std::io::copy(&mut file, &mut new_zip)?;
+            new_zip.raw_copy_file(file)?;
         }
     }
 
@@ -163,5 +163,78 @@ impl Seek for BufReadWrite {
         // seek the underlying handle even if the seek is within the buffer
         // bounds. This is why this `seek()` works for writing as well.
         self.r.seek(pos)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_dir() -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("muxa-zip-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn names(zip_path: &Path) -> Vec<String> {
+        let mut zip = zip::ZipArchive::new(File::open(zip_path).unwrap()).unwrap();
+        (0..zip.len())
+            .map(|i| zip.by_index(i).unwrap().name().to_string())
+            .collect()
+    }
+
+    fn read_entry(zip_path: &Path, name: &str) -> Vec<u8> {
+        let mut zip = zip::ZipArchive::new(File::open(zip_path).unwrap()).unwrap();
+        let mut buf = Vec::new();
+        zip.by_name(name).unwrap().read_to_end(&mut buf).unwrap();
+        buf
+    }
+
+    fn make_zip(dir: &Path) -> PathBuf {
+        let zip_path = dir.join("test.zip");
+        let mut zip = zip::ZipWriter::new(File::create(&zip_path).unwrap());
+        zip.add_directory("artist - song", SimpleFileOptions::default())
+            .unwrap();
+        for (name, body) in [("a.txt", "aaa"), ("b.txt", "bbb"), ("c.txt", "ccc")] {
+            zip.start_file(name, SimpleFileOptions::default()).unwrap();
+            zip.write_all(body.as_bytes()).unwrap();
+        }
+        zip.finish().unwrap();
+        zip_path
+    }
+
+    #[test]
+    fn remove_file_twice() {
+        let dir = temp_dir();
+        let zip_path = make_zip(&dir);
+
+        remove_file_from_zip("a.txt", &zip_path, "artist", "song").unwrap();
+        assert_eq!(names(&zip_path), ["artist - song/", "b.txt", "c.txt"]);
+
+        remove_file_from_zip("b.txt", &zip_path, "artist", "song").unwrap();
+        assert_eq!(names(&zip_path), ["artist - song/", "c.txt"]);
+        assert_eq!(read_entry(&zip_path, "c.txt"), b"ccc");
+
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn add_then_remove() {
+        let dir = temp_dir();
+        let zip_path = make_zip(&dir);
+        let src = dir.join("d.txt");
+        std::fs::write(&src, "ddd").unwrap();
+
+        let name = add_file_to_zip(&src, "a.txt", &zip_path).unwrap();
+        assert_eq!(name, "a-copy.txt");
+        assert_eq!(read_entry(&zip_path, "a-copy.txt"), b"ddd");
+
+        remove_file_from_zip("a.txt", &zip_path, "artist", "song").unwrap();
+        assert_eq!(
+            names(&zip_path),
+            ["artist - song/", "b.txt", "c.txt", "a-copy.txt"]
+        );
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }
